@@ -6,8 +6,6 @@ import NFTMarketplace from "views/admin/marketplace";
 import Profile from "views/admin/profile";
 import DataTables from "views/admin/tables";
 import RTLDefault from "views/rtl/default";
-import LandingLayout from "layouts/landing";
-import Home from "views/landing/Home";
 
 
 
@@ -25,17 +23,6 @@ import {
 } from "react-icons/md";
 
 const routes = [
-  {
-  layout: "/",
-  component: <LandingLayout />,
-  pages: [
-    {
-      path: "",
-      component: <Home />,
-    },
-  ],
-  },
-
   {
     name: "Main Dashboard",
     layout: "/admin",
