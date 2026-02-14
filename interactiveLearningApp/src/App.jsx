@@ -4,17 +4,15 @@ import { Routes, Route } from "react-router-dom";
 import RtlLayout from "layouts/rtl";
 import AdminLayout from "layouts/admin";
 import AuthLayout from "layouts/auth";
-import LandingLayout from "layouts/landing";
-import Home from "views/landing/Home";
+
+import GuestHome from "./views/landing/GuestHome";
 
 const App = () => {
   return (
     <Routes>
 
-      {/* Landing Page */}
-      <Route path="/" element={<LandingLayout />}>
-        <Route index element={<Home />} />
-      </Route>
+      {/* Landing Page (Guest) */}
+      <Route path="/" element={<GuestHome />} />
 
       {/* Auth */}
       <Route path="auth/*" element={<AuthLayout />} />
