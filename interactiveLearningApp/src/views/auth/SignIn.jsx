@@ -1,8 +1,60 @@
+import { useState } from "react";
 import InputField from "components/fields/InputField";
 import { FcGoogle } from "react-icons/fc";
 import Checkbox from "components/checkbox";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function SignIn() {
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // ==========================
+  // 🔐 LOCAL LOGIN
+  // ==========================
+  const handleLocalLogin = async () => {
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/users/login", {
+        email: email,
+        password: password,
+        authprovider: "local",
+      });
+
+      localStorage.setItem("access_token", res.data.access_token);
+      alert("Login successful");
+      navigate("/admin");
+    } catch (err) {
+      alert(err.response?.data?.message || "Login failed");
+    }
+  };
+
+  // ==========================
+  // 🔐 GOOGLE LOGIN
+  // ==========================
+  const googleLogin = useGoogleLogin({
+    flow: "implicit",
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await axios.post("http://127.0.0.1:5000/users/login", {
+          access_token: tokenResponse.access_token,
+          authprovider: "google",
+        });
+
+        localStorage.setItem("access_token", res.data.access_token);
+        alert("Google login successful");
+        navigate("/admin");
+      } catch (err) {
+        alert("Google login failed");
+      }
+    },
+    onError: () => {
+      alert("Google Login Failed");
+    },
+  });
+
   return (
     <div className="mt-16 mb-16 flex h-full w-full items-center justify-center px-2 md:mx-0 md:px-0 lg:mb-10 lg:items-center lg:justify-start">
       {/* Sign in section */}
@@ -13,7 +65,12 @@ export default function SignIn() {
         <p className="mb-9 ml-1 text-base text-gray-600">
           Enter your email and password to sign in!
         </p>
-        <div className="mb-6 flex h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-lightPrimary hover:cursor-pointer dark:bg-navy-800">
+
+        {/* GOOGLE BUTTON (UI unchanged, just added onClick) */}
+        <div
+          onClick={() => googleLogin()}
+          className="mb-6 flex h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-lightPrimary hover:cursor-pointer dark:bg-navy-800"
+        >
           <div className="rounded-full text-xl">
             <FcGoogle />
           </div>
@@ -21,11 +78,13 @@ export default function SignIn() {
             Sign In with Google
           </h5>
         </div>
-        <div className="mb-6 flex items-center  gap-3">
+
+        <div className="mb-6 flex items-center gap-3">
           <div className="h-px w-full bg-gray-200 dark:bg-navy-700" />
           <p className="text-base text-gray-600 dark:text-white"> or </p>
           <div className="h-px w-full bg-gray-200 dark:bg-navy-700" />
         </div>
+
         {/* Email */}
         <InputField
           variant="auth"
@@ -34,6 +93,8 @@ export default function SignIn() {
           placeholder="mail@simmmple.com"
           id="email"
           type="text"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         {/* Password */}
@@ -44,7 +105,10 @@ export default function SignIn() {
           placeholder="Min. 8 characters"
           id="password"
           type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
+
         {/* Checkbox */}
         <div className="mb-4 flex items-center justify-between px-2">
           <div className="flex items-center">
@@ -60,9 +124,15 @@ export default function SignIn() {
             Forgot Password?
           </a>
         </div>
-        <button className="linear mt-2 w-full rounded-xl bg-brand-500 py-[12px] text-base font-medium text-white transition duration-200 hover:bg-brand-600 active:bg-brand-700 dark:bg-brand-400 dark:text-white dark:hover:bg-brand-300 dark:active:bg-brand-200">
+
+        {/* LOCAL LOGIN BUTTON (UI unchanged, just added onClick) */}
+        <button
+          onClick={handleLocalLogin}
+          className="linear mt-2 w-full rounded-xl bg-brand-500 py-[12px] text-base font-medium text-white transition duration-200 hover:bg-brand-600 active:bg-brand-700 dark:bg-brand-400 dark:text-white dark:hover:bg-brand-300 dark:active:bg-brand-200"
+        >
           Sign In
         </button>
+
         <div className="mt-4">
           <span className=" text-sm font-medium text-navy-700 dark:text-gray-600">
             Not registered yet?
