@@ -38,6 +38,7 @@ export default function SignUp() {
         email: form.email,
         password: form.password,
         authprovider: "local",
+        role:"user",
       });
 
       localStorage.setItem("access_token", res.data.access_token);
@@ -56,6 +57,7 @@ export default function SignUp() {
         const res = await axios.post("http://127.0.0.1:5000/users/register", {
           access_token: tokenResponse.access_token,
           authprovider: "google",
+          role:"user",
         });
 
         localStorage.setItem("access_token", res.data.access_token);

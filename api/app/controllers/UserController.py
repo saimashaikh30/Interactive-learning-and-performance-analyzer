@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app import db, mail
-from app.models import User, AuthProviderEnum
+from app.models import User, AuthProviderEnum, UserRoleEnum
 import requests
 from flask_mail import Message
 
@@ -15,6 +15,12 @@ user_bp = Blueprint("user_bp", __name__)
 def register():
     data = request.get_json()
     provider = data.get("authprovider")
+    role_str = data.get("role")
+
+    # Validate role
+    if role_str not in [r.value for r in UserRoleEnum]:
+        return jsonify({"message": f"Invalid role. Must be one of {[r.value for r in UserRoleEnum]}"}), 400
+    role = UserRoleEnum(role_str)
 
     if provider == "local":
         name = data.get("name")
@@ -28,7 +34,13 @@ def register():
             return jsonify({"message": "User already exists"}), 400
 
         hashed_pw = generate_password_hash(password)
-        user = User(name=name, email=email, password=hashed_pw, authprovider=AuthProviderEnum.local)
+        user = User(
+            name=name,
+            email=email,
+            password=hashed_pw,
+            authprovider=AuthProviderEnum.local,
+            role=role
+        )
         db.session.add(user)
         db.session.commit()
 
@@ -54,7 +66,13 @@ def register():
 
         user = User.query.filter_by(email=email).first()
         if not user:
-            user = User(name=name, email=email, password=None, authprovider=AuthProviderEnum.google)
+            user = User(
+                name=name,
+                email=email,
+                password=None,
+                authprovider=AuthProviderEnum.google,
+                role=role
+            )
             db.session.add(user)
             db.session.commit()
 

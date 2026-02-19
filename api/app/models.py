@@ -7,6 +7,10 @@ class AuthProviderEnum(enum.Enum):
     local = "local"
     google = "google"
 
+class UserRoleEnum(enum.Enum):
+    admin="admin"
+    superadmin="superadmin"
+    user="user"
 
 class QuestionTypeEnum(enum.Enum):
     problem_statement = "problem_statement"
@@ -27,7 +31,8 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=True)
-
+    role=db.Column(db.Enum(UserRoleEnum,name="user_role_enum"),
+                nullable=False)
     authprovider = db.Column(
         db.Enum(AuthProviderEnum, name="auth_provider_enum"),
         nullable=False
