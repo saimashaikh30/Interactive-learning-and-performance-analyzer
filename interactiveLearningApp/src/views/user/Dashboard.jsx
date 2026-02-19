@@ -1,38 +1,77 @@
-const courses = [
-  { name: "Data Structures & Algorithms", progress: 65, hours: 40 },
-  { name: "Operating Systems", progress: 50, hours: 28 },
-  { name: "Computer Networks", progress: 35, hours: 18 },
-];
+import Widget from "../../components/widget/Widget";
+import MiniCalendar from "../../components/calendar/MiniCalendar";
 
-export default function Dashboard() {
+import {
+  MdMenuBook,
+  MdFavorite,
+  MdHelpOutline,
+  MdTrendingUp,
+} from "react-icons/md";
+
+const Dashboard = () => {
   return (
-    <div className="dashboard">
-      <h1>Dashboard</h1>
+    <div className="mt-6 space-y-6">
 
-      <div className="card-container">
-        {courses.map((course, i) => (
-          <div key={i} className="card">
-            <h3>{course.name}</h3>
-            <p>Progress: {course.progress}%</p>
-            <p>Study Hours: {course.hours}</p>
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: course.progress + "%" }}
-              ></div>
+      {/* ================= USER STATS ================= */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <Widget
+          icon={<MdMenuBook className="h-6 w-6" />}
+          title={"Subjects Available"}
+          subtitle={"3"}
+        />
+
+        <Widget
+          icon={<MdHelpOutline className="h-6 w-6" />}
+          title={"Questions Practiced"}
+          subtitle={"24"}
+        />
+
+        <Widget
+          icon={<MdFavorite className="h-6 w-6" />}
+          title={"Favorite Questions"}
+          subtitle={"8"}
+        />
+
+        <Widget
+          icon={<MdTrendingUp className="h-6 w-6" />}
+          title={"Progress"}
+          subtitle={"65%"}
+        />
+      </div>
+
+      {/* ================= SUBJECT SECTION ================= */}
+      <div className="rounded-xl bg-white dark:bg-navy-800 px-6 py-4 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
+          Quick Access Subjects
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {["DSA", "CN", "OS"].map((subject, index) => (
+            <div
+              key={index}
+              className="rounded-lg bg-lightPrimary dark:bg-navy-700 p-4 cursor-pointer hover:shadow-md transition"
+            >
+              <h4 className="font-medium text-navy-700 dark:text-white">
+                {subject}
+              </h4>
+              <p className="text-sm text-gray-500 mt-1">
+                Click to explore questions
+              </p>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="activity">
-        <h2>Recent Study Activity</h2>
-        <ul>
-          <li>Completed Arrays topic</li>
-          <li>Learned Process Scheduling</li>
-          <li>Studied OSI Model</li>
-        </ul>
+      {/* ================= CALENDAR ================= */}
+      <div className="rounded-xl bg-white dark:bg-navy-800 p-4 shadow-sm">
+        <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-white">
+          Study Calendar
+        </h3>
+        <MiniCalendar />
       </div>
+
     </div>
   );
-}
+};
+
+export default Dashboard;

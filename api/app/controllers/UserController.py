@@ -142,7 +142,7 @@ def login():
         msg = Message(
             subject="Login Notification",
             recipients=[user.email],
-            body=f"Hello {user.name},\n\nYou just logged into your account successfully!"
+            body=f"Hello {user.name},\n\nYou just logged into ILPS successfully!"
         )
         mail.send(msg)
     except Exception as e:

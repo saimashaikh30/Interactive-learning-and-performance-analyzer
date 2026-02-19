@@ -1,18 +1,17 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-
+import UserLayout from "layouts/user";
 import RtlLayout from "layouts/rtl";
 import AdminLayout from "layouts/admin";
 import AuthLayout from "layouts/auth";
 
 import GuestHome from "./views/landing/GuestHome";
-import Dashboard from "./views/user/Dashboard";
 
 const App = () => {
   return (
     <Routes>
 
-      {/* Landing Page (Guest) */}
+      {/* Landing Page */}
       <Route path="/" element={<GuestHome />} />
 
       {/* Auth */}
@@ -23,8 +22,7 @@ const App = () => {
 
       {/* RTL */}
       <Route path="rtl/*" element={<RtlLayout />} />
-
-      <Route path="user/" element={<Dashboard />} />
+    <Route path="user/*" element={<UserLayout />} />
 
     </Routes>
   );
