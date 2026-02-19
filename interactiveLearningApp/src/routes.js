@@ -16,7 +16,9 @@ import SignUp from "views/auth/SignUp";
 // Icon Imports
 import {
   MdHome,
-  MdOutlineShoppingCart,
+  MdSettings,
+  MdMenuBook,
+  MdHelpOutline,
   MdBarChart,
   MdPerson,
   MdLock,
@@ -24,39 +26,53 @@ import {
 
 const routes = [
   {
-    name: "Main Dashboard",
+    name: "Dashboard",
     layout: "/admin",
     path: "default",
     icon: <MdHome className="h-6 w-6" />,
     component: <MainDashboard />,
   },
   {
-    name: "NFT Marketplace",
+    name: "Users",
     layout: "/admin",
     path: "nft-marketplace",
-    icon: <MdOutlineShoppingCart className="h-6 w-6" />,
-    component: <NFTMarketplace />,
+    icon: <MdPerson className="h-6 w-6" />,
+    //component: <NFTMarketplace />,
     secondary: true,
   },
   {
-    name: "Data Tables",
+    name: "Subjects",
     layout: "/admin",
-    icon: <MdBarChart className="h-6 w-6" />,
+    icon: <MdMenuBook className="h-6 w-6" />,
     path: "data-tables",
-    component: <DataTables />,
+    //component: <DataTables />,
   },
   {
-    name: "Profile",
+    name: "Question Requests",
     layout: "/admin",
     path: "profile",
-    icon: <MdPerson className="h-6 w-6" />,
-    component: <Profile />,
+    icon: <MdHelpOutline className="h-6 w-6" />,
+    //component: <Profile />,
+  },
+  
+  {
+    name: "Reports",
+    layout: "/admin",
+    path: "sign-up",
+    icon: <MdBarChart className="h-6 w-6" />,
+    //component: <SignUp />,
+  },
+  {
+    name: "Settings",
+    layout: "/admin",
+    path: "reports",
+    icon: <MdSettings className="h-6 w-6" />,
+    //component: <RTLDefault />,
   },
   {
     name: "Sign In",
     layout: "/auth",
     path: "sign-in",
-    icon: <MdLock className="h-6 w-6" />,
     component: <SignIn />,
   },
   {
@@ -64,13 +80,6 @@ const routes = [
     layout: "/auth",
     path: "sign-up",
     component: <SignUp />,
-  },
-  {
-    name: "RTL Admin",
-    layout: "/rtl",
-    path: "rtl",
-    icon: <MdHome className="h-6 w-6" />,
-    component: <RTLDefault />,
   },
 ];
 export default routes;

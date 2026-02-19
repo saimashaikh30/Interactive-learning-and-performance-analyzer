@@ -1,99 +1,88 @@
 import MiniCalendar from "components/calendar/MiniCalendar";
-import WeeklyRevenue from "views/admin/default/components/WeeklyRevenue";
-import TotalSpent from "views/admin/default/components/TotalSpent";
 import PieChartCard from "views/admin/default/components/PieChartCard";
-import { IoMdHome } from "react-icons/io";
-import { IoDocuments } from "react-icons/io5";
-import { MdBarChart, MdDashboard } from "react-icons/md";
-
-import { columnsDataCheck, columnsDataComplex } from "./variables/columnsData";
-
 import Widget from "components/widget/Widget";
-import CheckTable from "views/admin/default/components/CheckTable";
-import ComplexTable from "views/admin/default/components/ComplexTable";
-import DailyTraffic from "views/admin/default/components/DailyTraffic";
-import TaskCard from "views/admin/default/components/TaskCard";
-import tableDataCheck from "./variables/tableDataCheck.json";
-import tableDataComplex from "./variables/tableDataComplex.json";
+
+import {
+  MdPerson,
+  MdMenuBook,
+  MdHelpOutline,
+  MdBarChart,
+} from "react-icons/md";
 
 const Dashboard = () => {
   return (
-    <div>
-      {/* Card widget */}
+    <div className="mt-6 space-y-6">
 
-      <div className="mt-3 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 3xl:grid-cols-6">
+      {/* ================= TOP STATS ================= */}
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
         <Widget
-          icon={<MdBarChart className="h-7 w-7" />}
-          title={"Earnings"}
-          subtitle={"$340.5"}
+          icon={<MdPerson className="h-6 w-6" />}
+          title={"Total Users"}
+          subtitle={"120"}
         />
         <Widget
-          icon={<IoDocuments className="h-6 w-6" />}
-          title={"Spend this month"}
-          subtitle={"$642.39"}
+          icon={<MdMenuBook className="h-6 w-6" />}
+          title={"Total Subjects"}
+          subtitle={"3"}
         />
         <Widget
-          icon={<MdBarChart className="h-7 w-7" />}
-          title={"Sales"}
-          subtitle={"$574.34"}
+          icon={<MdBarChart className="h-6 w-6" />}
+          title={"Total Topics"}
+          subtitle={"54"}
         />
         <Widget
-          icon={<MdDashboard className="h-6 w-6" />}
-          title={"Your Balance"}
-          subtitle={"$1,000"}
-        />
-        <Widget
-          icon={<MdBarChart className="h-7 w-7" />}
-          title={"New Tasks"}
-          subtitle={"145"}
-        />
-        <Widget
-          icon={<IoMdHome className="h-6 w-6" />}
-          title={"Total Projects"}
-          subtitle={"$2433"}
+          icon={<MdHelpOutline className="h-6 w-6" />}
+          title={"Pending Requests"}
+          subtitle={"6"}
         />
       </div>
 
-      {/* Charts */}
+      {/* ================= SLIM PENDING STRIP ================= */}
 
-      <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
-        <TotalSpent />
-        <WeeklyRevenue />
-      </div>
-
-      {/* Tables & Charts */}
-
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        {/* Check Table */}
+      <div className="rounded-xl bg-white dark:bg-navy-800 px-6 py-3 shadow-sm flex items-center justify-between">
         <div>
-          <CheckTable
-            columnsData={columnsDataCheck}
-            tableData={tableDataCheck}
-          />
+          <p className="text-sm text-gray-500 dark:text-gray-300">
+            Pending Question Requests
+          </p>
+          <p className="text-xl font-bold text-gray-800 dark:text-white">
+            6 awaiting approval
+          </p>
         </div>
 
-        {/* Traffic chart & Pie Chart */}
+        <button className="text-sm font-medium text-brand-500 hover:underline">
+          View All
+        </button>
+      </div>
 
-        <div className="grid grid-cols-1 gap-5 rounded-[20px] md:grid-cols-2">
-          <DailyTraffic />
-          <PieChartCard />
-        </div>
+      {/* ================= MAIN CONTENT ================= */}
 
-        {/* Complex Table , Task & Calendar */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
 
-        <ComplexTable
-          columnsData={columnsDataComplex}
-          tableData={tableDataComplex}
-        />
+        {/* Pie Chart */}
+        <div className="xl:col-span-4 rounded-xl bg-white dark:bg-navy-800 p-4 shadow-sm">
 
-        {/* Task chart & Calendar */}
+          <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-white">
+            Pie Chart
+          </h3>
 
-        <div className="grid grid-cols-1 gap-5 rounded-[20px] md:grid-cols-2">
-          <TaskCard />
-          <div className="grid grid-cols-1 rounded-[20px]">
-            <MiniCalendar />
+          <div className="flex justify-center">
+            <div className="w-[350px]">
+              <PieChartCard />
+            </div>
           </div>
         </div>
+
+        {/* Calendar */}
+        <div className="xl:col-span-4 rounded-xl bg-white dark:bg-navy-800 p-4 shadow-sm">
+
+          <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-white">
+            Calendar
+          </h3>
+
+          <MiniCalendar />
+        </div>
+
       </div>
     </div>
   );

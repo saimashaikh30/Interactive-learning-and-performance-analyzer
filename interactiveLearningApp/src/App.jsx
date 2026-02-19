@@ -6,6 +6,7 @@ import AdminLayout from "layouts/admin";
 import AuthLayout from "layouts/auth";
 
 import GuestHome from "./views/landing/GuestHome";
+import Dashboard from "./views/user/Dashboard";
 
 const App = () => {
   return (
@@ -22,6 +23,8 @@ const App = () => {
 
       {/* RTL */}
       <Route path="rtl/*" element={<RtlLayout />} />
+
+      <Route path="user/" element={<Dashboard />} />
 
     </Routes>
   );
