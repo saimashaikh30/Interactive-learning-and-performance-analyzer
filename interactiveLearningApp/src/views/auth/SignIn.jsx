@@ -11,7 +11,6 @@ export default function SignIn() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   // ==========================
   // 🔐 LOCAL LOGIN
   // ==========================
@@ -25,7 +24,12 @@ export default function SignIn() {
 
       localStorage.setItem("access_token", res.data.access_token);
       alert("Login successful");
+       if(res.data.role=="user"){
+        navigate("/user");
+      }
+      else{
       navigate("/admin");
+      }
     } catch (err) {
       alert(err.response?.data?.message || "Login failed");
     }
@@ -45,7 +49,12 @@ export default function SignIn() {
 
         localStorage.setItem("access_token", res.data.access_token);
         alert("Google login successful");
-        navigate("/admin");
+         if(res.data.role=="user"){
+        navigate("/user");
+      }
+      else{
+      navigate("/admin");
+      }
       } catch (err) {
         alert("Google login failed");
       }

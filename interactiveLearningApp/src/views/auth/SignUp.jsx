@@ -62,7 +62,7 @@ export default function SignUp() {
 
         localStorage.setItem("access_token", res.data.access_token);
         alert("Google registration successful");
-        navigate("/admin");
+      navigate("/admin");
       } catch (err) {
         alert(err.response?.data?.message || "Google registration failed");
       }

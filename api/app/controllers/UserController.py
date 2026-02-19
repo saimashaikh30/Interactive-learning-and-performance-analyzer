@@ -71,7 +71,7 @@ def register():
                 email=email,
                 password=None,
                 authprovider=AuthProviderEnum.google,
-                role=role
+                role=UserRoleEnum.user
             )
             db.session.add(user)
             db.session.commit()
@@ -128,7 +128,7 @@ def login():
 
         user = User.query.filter_by(email=email).first()
         if not user:
-            user = User(name=name, email=email, password=None, authprovider=AuthProviderEnum.google)
+            user = User(name=name, email=email, password=None, authprovider=AuthProviderEnum.google, role=UserRoleEnum.user)
             db.session.add(user)
             db.session.commit()
 
@@ -148,7 +148,7 @@ def login():
     except Exception as e:
         print("Failed to send email:", e)
 
-    return jsonify({"message": "Login successful", "access_token": access_token}), 200
+    return jsonify({"message": "Login successful", "access_token": access_token, "role": user.role.value }), 200
 
 
 # =========================
