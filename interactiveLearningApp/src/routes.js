@@ -32,6 +32,7 @@ const routes = [
     path: "default",
     icon: <MdHome className="h-6 w-6" />,
     component: <MainDashboard />,
+    roles: ["admin", "super_admin"]
   },
 
   {
@@ -41,6 +42,7 @@ const routes = [
     icon: <MdPerson className="h-6 w-6" />,
     //component: <NFTMarketplace />,
     secondary: true,
+    roles: ["admin", "super_admin"]
   },
   {
     name: "Subjects",
@@ -48,6 +50,7 @@ const routes = [
     icon: <MdMenuBook className="h-6 w-6" />,
     path: "data-tables",
     //component: <DataTables />,
+    roles: ["admin", "super_admin"]
   },
   {
     name: "Question Requests",
@@ -55,6 +58,7 @@ const routes = [
     path: "profile",
     icon: <MdHelpOutline className="h-6 w-6" />,
     //component: <Profile />,
+    roles: ["admin", "super_admin"]
   },
   
   {
@@ -63,13 +67,23 @@ const routes = [
     path: "sign-up",
     icon: <MdBarChart className="h-6 w-6" />,
     //component: <SignUp />,
+    roles: ["admin", "super_admin"]
   },
   {
-    name: "Settings",
+    name: "Profile Settings",
     layout: "/admin",
     path: "reports",
     icon: <MdSettings className="h-6 w-6" />,
     //component: <RTLDefault />,
+    roles: ["admin", "super_admin"]
+  },
+  {
+    name: "Admin Management",
+    layout: "/admin",
+    path: "manage_admin",
+    icon: <MdLock className="h-6 w-6" />,
+    //component: <RTLDefault />,
+    roles: ["super_admin"]
   },
   {
     name: "Sign In",

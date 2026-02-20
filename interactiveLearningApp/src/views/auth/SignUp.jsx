@@ -43,7 +43,7 @@ export default function SignUp() {
 
       localStorage.setItem("access_token", res.data.access_token);
       alert("Registration successful");
-      navigate("/admin");
+      navigate("/user");
     } catch (err) {
       alert(err.response?.data?.message || "Registration failed");
     }

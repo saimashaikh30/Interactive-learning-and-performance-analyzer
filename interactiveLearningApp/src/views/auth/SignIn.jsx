@@ -21,7 +21,6 @@ export default function SignIn() {
         password: password,
         authprovider: "local",
       });
-
       localStorage.setItem("access_token", res.data.access_token);
       alert("Login successful");
        if(res.data.role=="user"){
