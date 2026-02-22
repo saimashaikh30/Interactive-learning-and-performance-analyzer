@@ -13,6 +13,7 @@ import UserDashboard from "views/user/Dashboard";
 // Auth Imports
 import SignIn from "views/auth/SignIn";
 import SignUp from "views/auth/SignUp";
+import ForgotPassword from "views/auth/ForgotPassword";
 
 // Icon Imports
 import {
@@ -97,5 +98,11 @@ const routes = [
     path: "sign-up",
     component: <SignUp />,
   },
+  {
+    name: "Forgot Password",
+    layout: "/auth",
+    path: "forgot-password",
+    component: <ForgotPassword />,
+  }
 ];
 export default routes;

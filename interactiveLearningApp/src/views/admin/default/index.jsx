@@ -75,12 +75,13 @@ const Dashboard = () => {
 
         {/* Calendar */}
         <div className="xl:col-span-4 rounded-xl bg-white dark:bg-navy-800 p-4 shadow-sm">
-
           <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-white">
             Calendar
           </h3>
 
-          <MiniCalendar />
+          <div className="text-gray-800 dark:text-white">
+            <MiniCalendar />
+          </div>
         </div>
 
       </div>

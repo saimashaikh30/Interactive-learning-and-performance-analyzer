@@ -1,68 +1,161 @@
-import Footer from "components/footer/FooterAuthDefault";
-import authImg from "assets/img/auth/auth.png";
-import { Link, Routes, Route, Navigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import routes from "routes.js";
-import FixedPlugin from "components/fixedPlugin/FixedPlugin";
+import logo from "assets/img/landing/logo.png";
+import { HiArrowLeft } from "react-icons/hi";
+import {
+  HiOutlineBookOpen,
+  HiOutlineClipboardList,
+  HiOutlineOfficeBuilding,
+  HiOutlineDeviceMobile,
+} from "react-icons/hi";
 
 export default function Auth() {
-  const getRoutes = (routes) => {
-    return routes.map((prop, key) => {
-      if (prop.layout === "/auth") {
-        return (
-          <Route path={`/${prop.path}`} element={prop.component} key={key} />
-        );
-      } else {
-        return null;
-      }
-    });
-  };
-  document.documentElement.dir = "ltr";
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // ❌ Hide right card on forgot password
+  const hideRightCard = location.pathname.includes("forgot-password");
+
+  const getRoutes = (routes) =>
+    routes.map((prop, key) =>
+      prop.layout === "/auth" ? (
+        <Route path={`/${prop.path}`} element={prop.component} key={key} />
+      ) : null
+    );
+
   return (
-    <div>
-      <div className="relative float-right h-full min-h-screen w-full !bg-white dark:!bg-navy-900">
-        <FixedPlugin />
-        <main className={`mx-auto min-h-screen`}>
-          <div className="relative flex">
-            <div className="mx-auto flex min-h-full w-full flex-col justify-start pt-12 md:max-w-[75%]  lg:max-w-[1013px] lg:px-8 lg:pt-0 xl:min-h-[100vh] xl:max-w-[1383px] xl:px-0 xl:pl-[70px]">
-              <div className="mb-auto flex flex-col pl-5 pr-5 md:pr-0 md:pl-12 lg:max-w-[48%] lg:pl-0 xl:max-w-full">
-                {/* <Link to="/admin" className="mt-0 w-max lg:pt-10">
-                  <div className="mx-auto flex h-fit w-fit items-center hover:cursor-pointer">
-                    <svg
-                      width="8"
-                      height="12"
-                      viewBox="0 0 8 12"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.70994 2.11997L2.82994 5.99997L6.70994 9.87997C7.09994 10.27 7.09994 10.9 6.70994 11.29C6.31994 11.68 5.68994 11.68 5.29994 11.29L0.709941 6.69997C0.319941 6.30997 0.319941 5.67997 0.709941 5.28997L5.29994 0.699971C5.68994 0.309971 6.31994 0.309971 6.70994 0.699971C7.08994 1.08997 7.09994 1.72997 6.70994 2.11997V2.11997Z"
-                        fill="#A3AED0"
-                      />
-                    </svg>
-                    <p className="ml-3 text-sm text-gray-600">
-                      Back to Dashboard
-                    </p>
-                  </div>
-                </Link> */}
-                <Routes>
-                  {getRoutes(routes)}
-                  <Route
-                    path="/"
-                    element={<Navigate to="/auth/sign-in" replace />}
-                  />
-                </Routes>
-                <div className="absolute right-0 hidden h-full min-h-screen md:block lg:w-[49vw] 2xl:w-[44vw]">
-                  <div
-                    className="absolute flex h-full w-full items-end justify-center bg-cover bg-center lg:rounded-bl-[120px] xl:rounded-bl-[200px]"
-                    style={{ backgroundImage: `url(${authImg})` }}
-                  />
+    <div
+      className="
+        relative h-screen w-full
+        bg-gradient-to-br
+        from-[#5f8cff]
+        via-[#7b8cff]
+        to-[#9ad7f5]
+        overflow-y-auto
+        px-4 py-8
+      "
+    >
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="
+          absolute top-6 left-6
+          flex items-center gap-2
+          text-white text-sm font-medium
+          opacity-90 hover:opacity-100
+        "
+      >
+        <HiArrowLeft className="text-lg" />
+        Back
+      </button>
+
+      {/* Center wrapper */}
+      <div className="min-h-full flex items-center justify-center">
+        <div
+          className={`w-full max-w-6xl flex items-stretch max-h-[90vh]
+            ${hideRightCard ? "justify-center" : ""}
+          `}
+        >
+          {/* ================= LEFT: AUTH CARD ================= */}
+          <div
+            className={`bg-white shadow-xl px-8 py-9 md:px-10 overflow-y-auto
+              ${
+                hideRightCard
+                  ? "w-full max-w-md rounded-2xl"
+                  : "w-full md:w-1/2 rounded-l-2xl"
+              }
+            `}
+          >
+            <div className="mb-6">
+              <img src={logo} alt="Logo" className="h-14 object-contain" />
+            </div>
+
+            <Routes>
+              {getRoutes(routes)}
+              <Route
+                path="/"
+                element={<Navigate to="/auth/sign-up" replace />}
+              />
+            </Routes>
+          </div>
+
+          {/* ================= DIVIDER ================= */}
+          {!hideRightCard && (
+            <div className="hidden md:flex items-center">
+              <div className="h-[85%] w-[1px] bg-gray-200" />
+            </div>
+          )}
+
+          {/* ================= RIGHT: ABOUT CARD ================= */}
+          {!hideRightCard && (
+            <div className="hidden md:flex w-1/2 bg-gray-50 rounded-r-2xl shadow-xl px-10 py-12 flex-col justify-between overflow-y-auto">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 leading-snug">
+                  <span className="text-blue-600">Interactive Learning </span>
+                   & Performance System{" "}
+                </h2>
+
+                <p className="mt-4 text-gray-600 leading-relaxed">
+                  A structured learning platform designed to help users prepare
+                  for placements through organized content and guided practice.
+                </p>
+
+                <div className="mt-6 rounded-xl border bg-white px-5 py-4 shadow-sm">
+                  <p className="font-medium text-gray-800">
+                    Placement-focused learning across web and mobile platforms.
+                  </p>
                 </div>
               </div>
-              {/* <Footer /> */}
+
+              <div className="grid grid-cols-2 gap-6 mt-10">
+                <Feature
+                  icon={<HiOutlineBookOpen />}
+                  title="Structured Learning"
+                  desc="Topics organized by difficulty level."
+                />
+                <Feature
+                  icon={<HiOutlineClipboardList />}
+                  title="Practice Questions"
+                  desc="MCQs, blanks, and coding problems."
+                />
+                <Feature
+                  icon={<HiOutlineOfficeBuilding />}
+                  title="Company Questions"
+                  desc="Interview questions by frequency."
+                />
+                <Feature
+                  icon={<HiOutlineDeviceMobile />}
+                  title="Any Device"
+                  desc="Accessible on web & mobile."
+                />
+              </div>
+
+              <p className="mt-10 text-sm text-gray-400">
+                © {new Date().getFullYear()} Interactive Learning System
+              </p>
             </div>
-          </div>
-        </main>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+/* ================= FEATURE CARD ================= */
+function Feature({ icon, title, desc }) {
+  return (
+    <div className="rounded-xl bg-white p-5 border shadow-sm">
+      <div className="mb-3 h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xl">
+        {icon}
+      </div>
+      <p className="font-medium text-gray-800 text-sm">{title}</p>
+      <p className="mt-1 text-xs text-gray-500">{desc}</p>
     </div>
   );
 }

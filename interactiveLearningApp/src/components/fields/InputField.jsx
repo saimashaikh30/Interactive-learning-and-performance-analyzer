@@ -1,42 +1,115 @@
-import React from "react";
+import { useState } from "react";
+import { HiEye, HiEyeOff } from "react-icons/hi";
 
-function InputField(props) {
-  const { label, id, extra, type, placeholder, variant, state, disabled, value, onChange } =
-    props;
+export default function InputField({
+  label,
+  type = "text",
+  value = "",
+  onChange,
+  state,
+}) {
+  const [focused, setFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const hasError = !!state;
+  const isActive = focused || value;
+  const isPassword = type === "password";
 
   return (
-    <div className={`${extra}`}>
-      <label
-        htmlFor={id}
-        className={`text-sm text-navy-700 dark:text-white ${
-          variant === "auth" ? "ml-1.5 font-medium" : "ml-3 font-bold"
-        }`}
-      >
-        {label}
-      </label>
+    <div className="w-full flex flex-col">
+      {/* Hide native browser password icons */}
+      <style>{`
+        input::-ms-reveal,
+        input::-ms-clear {
+          display: none !important;
+        }
+      `}</style>
 
-      <input
-        disabled={disabled}
-        type={type}
-        id={id}
-        placeholder={placeholder}
-        value={value}           // ✅ controlled
-        onChange={onChange}     // ✅ forward change event
-        className={`mt-2 flex h-12 w-full items-center justify-center rounded-xl border p-3 text-sm outline-none
-          ${
-            disabled
-              ? "!border-none !bg-gray-100 dark:!bg-white/5 dark:placeholder:!text-[rgba(255,255,255,0.15)]"
-              : state === "error"
-              ? "border-red-500 text-red-500 placeholder:text-red-500 dark:!border-red-400 dark:!text-red-400 dark:placeholder:!text-red-400"
-              : state === "success"
-              ? "border-green-500 text-green-500 placeholder:text-green-500 dark:!border-green-400 dark:!text-green-400 dark:placeholder:!text-green-400"
-              : "border-gray-200 text-gray-900 dark:!border-white/10 dark:text-white dark:placeholder:text-white/50"
-          } 
-          bg-white/0 dark:bg-navy-800
-        `}
-      />
+      <div className="relative">
+        {/* Floating Label */}
+        <label
+          className={`
+            absolute left-5 z-10 pointer-events-none transition-all duration-200
+            ${
+              isActive
+                ? "-top-2 text-sm bg-white px-1"
+                : "top-1/2 -translate-y-1/2 text-base"
+            }
+            ${
+              hasError
+                ? "text-red-500"
+                : focused
+                ? "text-blue-600"
+                : "text-gray-500"
+            }
+          `}
+        >
+          {label}
+        </label>
+
+        {/* Input Wrapper */}
+        <div
+          className={`
+            flex items-center
+            h-14
+            rounded-xl
+            border
+            bg-white
+            overflow-hidden
+            transition-all
+            ${
+              hasError
+                ? "border-red-500 focus-within:ring-2 focus-within:ring-red-300"
+                : focused
+                ? "border-blue-500 focus-within:ring-2 focus-within:ring-blue-200"
+                : "border-gray-300"
+            }
+          `}
+        >
+          {/* Input */}
+          <input
+            type={isPassword ? (showPassword ? "text" : "password") : type}
+            value={value}
+            onChange={onChange}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            autoComplete="off"
+            style={{ color: "#111827" }} // FORCE DARK TEXT
+            className={`
+              w-full
+              h-full
+              bg-transparent
+              px-5
+              text-lg
+              outline-none
+              placeholder-transparent
+              ${isPassword ? "pr-12" : "pr-5"}
+            `}
+          />
+
+          {/* Password Toggle */}
+          {isPassword && (
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 text-gray-500 hover:text-gray-700 focus:outline-none"
+            >
+              {showPassword ? (
+                <HiEyeOff className="h-5 w-5" />
+              ) : (
+                <HiEye className="h-5 w-5" />
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {hasError && (
+        <p className="mt-1 text-sm text-red-500">
+          {state}
+        </p>
+      )}
     </div>
   );
 }
-
-export default InputField;
