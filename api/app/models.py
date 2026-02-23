@@ -12,6 +12,7 @@ class UserRoleEnum(enum.Enum):
     admin = "admin"
     superadmin = "superadmin"
     user = "user"
+    contributor = "contributor"
 
 
 class DifficultyLevelEnum(enum.Enum):
@@ -20,23 +21,11 @@ class DifficultyLevelEnum(enum.Enum):
     hard = "hard"
 
 
-
-topic_questions = db.Table(
-    "topic_questions",
-    db.Column(
-        "topic_id",
-        db.Integer,
-        db.ForeignKey("topics.topic_id"),
-        primary_key=True
-    ),
-    db.Column(
-        "question_id",
-        db.Integer,
-        db.ForeignKey("questions.question_id"),
-        primary_key=True
-    )
-)
-
+class RequestStatusEnum(enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+    revoked = "revoked"
 
 
 class User(db.Model):
@@ -71,13 +60,6 @@ class Subject(db.Model):
     subject_id = db.Column(db.Integer, primary_key=True)
     subject_name = db.Column(db.String(100), nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
-    )
-
     topics = db.relationship(
         "Topic",
         backref="subject",
@@ -98,11 +80,8 @@ class Topic(db.Model):
         nullable=False
     )
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+    __table_args__ = (
+        db.UniqueConstraint("topic_name", "subject_id"),
     )
 
 
@@ -112,11 +91,6 @@ class Company(db.Model):
     company_id = db.Column(db.Integer, primary_key=True)
     company_name = db.Column(db.String(100), unique=True, nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    questions = db.relationship("Question", backref="company", lazy=True)
-
-
 
 class QuestionType(db.Model):
     __tablename__ = "question_types"
@@ -124,10 +98,21 @@ class QuestionType(db.Model):
     type_id = db.Column(db.Integer, primary_key=True)
     type_name = db.Column(db.String(50), unique=True, nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    questions = db.relationship("Question", backref="question_type", lazy=True)
+class Topic_Questions(db.Model):
+    __tablename__ = "topic_questions"
 
+    topic_id = db.Column(
+        db.Integer,
+        db.ForeignKey("topics.topic_id"),
+        primary_key=True
+    )
+
+    question_id = db.Column(
+        db.Integer,
+        db.ForeignKey("questions.question_id"),
+        primary_key=True
+    )
 
 
 class Question(db.Model):
@@ -141,19 +126,25 @@ class Question(db.Model):
         nullable=False
     )
 
-    year = db.Column(db.String(4), nullable=False)
-    technology = db.Column(db.String(50), nullable=False)
-    language = db.Column(db.String(50), nullable=False)
+    year = db.Column(db.String(4), nullable=True)
+    technology = db.Column(db.String(50), nullable=True)
+    language = db.Column(db.String(50), nullable=True)
 
     company_id = db.Column(
         db.Integer,
         db.ForeignKey("companies.company_id"),
-        nullable=False
+        nullable=True
     )
 
     type_id = db.Column(
         db.Integer,
         db.ForeignKey("question_types.type_id"),
+        nullable=False
+    )
+
+    created_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
         nullable=False
     )
 
@@ -164,21 +155,24 @@ class Question(db.Model):
         onupdate=datetime.utcnow
     )
 
-    # Many-to-Many with Topic
+    creator = db.relationship(
+        "User",
+        backref="created_questions",
+        foreign_keys=[created_by]
+    )
+
     topics = db.relationship(
         "Topic",
-        secondary=topic_questions,
+        secondary="topic_questions",
         backref=db.backref("questions", lazy="dynamic")
     )
 
-    # One-to-Many with Option
     options = db.relationship(
         "Option",
         backref="question",
         cascade="all, delete-orphan",
         lazy=True
     )
-
 
 
 class Option(db.Model):
@@ -189,10 +183,46 @@ class Option(db.Model):
     question_id = db.Column(
         db.Integer,
         db.ForeignKey("questions.question_id"),
-        primary_key=True
+        nullable=False
     )
 
     option_text = db.Column(db.String(500), nullable=False)
     is_correct = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Contributor_Request(db.Model):
+    __tablename__ = "contributor_request"
+
+    request_id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    status = db.Column(
+        db.Enum(RequestStatusEnum, name="request_status_enum"),
+        nullable=False
+    )
+
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    reviewed_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True
+    )
+
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    remarks = db.Column(db.String(200), nullable=True)
+
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id]
+    )
+
+    reviewer = db.relationship(
+        "User",
+        foreign_keys=[reviewed_by]
+    )
