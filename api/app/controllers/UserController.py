@@ -6,13 +6,12 @@ from app import db, mail
 from app.models import User, AuthProviderEnum, UserRoleEnum
 import requests
 import re
+import secrets
 
 user_bp = Blueprint("user_bp", __name__)
 
-
-# =========================
-# VALIDATION FUNCTIONS
-# =========================
+def generate_otp():
+    return secrets.randbelow(900000)+100000
 
 def is_valid_name(name):
     # Only letters and spaces allowed
@@ -163,6 +162,38 @@ def register():
 
     else:
         return jsonify({"message": "Invalid auth provider"}), 400
+    
+
+
+@user_bp.route("/sendOtp",methods=["POST"])
+def sendOtp():
+    data=request.get_json()
+
+    if not data:
+        return jsonify({"message":"Invalid request body"}),400
+    
+    email=data.get("email")
+    if not email:
+        return jsonify({"message":"Email requires"}),400
+    
+    user=User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"message":"No account found registered with this email"})
+    otp=generate_otp()
+    try:
+        msg = Message(
+            subject="Forgot Password OTP",
+            recipients=[user.email],
+            body=f"This is your One Time Password(otp):{otp}"
+        )
+        mail.send(msg)
+    except Exception as e:
+        print("Failed to send email:", e)
+
+    return jsonify({
+        "message": "Login successful",
+        "role": user.role.value
+    }), 200
 
 
 # =========================

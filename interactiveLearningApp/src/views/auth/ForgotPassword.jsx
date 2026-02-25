@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import InputField from "components/fields/InputField";
 import { HiMail } from "react-icons/hi";
+import axios from "axios";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -38,6 +39,13 @@ export default function ForgotPassword() {
     }
 
     setError("");
+    try{
+        const res=axios.post("http://127.0.0.1:5000/users/sendOtp",{
+          email:email,
+        });
+    }catch(err){
+      setError("Email not registered");
+    }
     setTimer(60); // start resend timer
     setStep("otp");
   };
