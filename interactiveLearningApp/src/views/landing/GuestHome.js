@@ -72,10 +72,10 @@ function GuestHome() {
             <p>Easy, Medium and Hard level selection.</p>
           </div>
 
-          <div className="feature-card">
+          {/* <div className="feature-card">
             🧠 Coding + MCQ Support
             <p>Practice MCQs, Fill in blanks and coding problems.</p>
-          </div>
+          </div> */}
         </div>
       </section>
 
