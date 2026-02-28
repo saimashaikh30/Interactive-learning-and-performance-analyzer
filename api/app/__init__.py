@@ -5,6 +5,7 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flask_mail import Mail
 from config import Config
+import redis
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -26,6 +27,13 @@ def create_app():
     migrate.init_app(app, db)
     mail.init_app(app)
     jwt.init_app(app)
+
+    app.redis_client=redis.Redis(
+        host='localhost',
+        port=6379,
+        db=0,
+        decode_responses=True
+    )
 
     from app import models
     from app.controllers.UserController import user_bp
