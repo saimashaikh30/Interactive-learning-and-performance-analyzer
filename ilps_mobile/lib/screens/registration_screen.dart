@@ -22,12 +22,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color.fromARGB(255, 124, 126, 242),
-                  Color.fromARGB(255, 40, 49, 146),
-                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF5F8CFF), // from
+                  Color(0xFF7B8CFF), // via
+                  Color(0xFF9AD7F5), // to
+                ],
               ),
             ),
           ),
@@ -58,7 +59,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       children: [
                         /// TITLE
                         const Text(
-                          "Create Account",
+                          "Register",
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -69,14 +70,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         const SizedBox(height: 8),
 
                         const Text(
-                          "Fill in the details to register",
+                          "Create your account to get started",
                           style: TextStyle(
                             color: Color.fromARGB(255, 127, 125, 125),
                             fontSize: 13,
                           ),
                         ),
 
-                        const SizedBox(height: 35),
+                        const SizedBox(height: 20),
 
                         /// FULL NAME
                         _buildTextField(
@@ -137,54 +138,43 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 20),
 
                         /// ===== MODERN GRADIENT REGISTER BUTTON =====
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(35),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color.fromARGB(255, 6, 6, 6),
-                                  Color.fromARGB(255, 4, 4, 4),
-                                  Color.fromARGB(255, 3, 3, 3),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                          height: 45,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 78, 62, 247),
+                              elevation: 6,
+                              shadowColor: const Color(0xFF5C5BFF),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0xFF5C5BFF).withOpacity(0.8),
-                                  blurRadius: 30,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
                             ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(35),
-                                onTap: () {},
-                                child: const Center(
-                                  child: Text(
-                                    "Register",
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color.fromARGB(255, 251, 248, 248),
-                                      letterSpacing: 0.6,
-                                    ),
-                                  ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginScreen(),
                                 ),
+                              );
+                            },
+                            child: const Text(
+                              "Create Account", // or "Verify Code"
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 0.6,
                               ),
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 25),
+                        const SizedBox(height: 20),
 
                         /// BACK TO LOGIN
                         Row(
@@ -265,36 +255,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }) {
     return TextField(
       obscureText: obscure,
-      cursorColor: const Color(0xFF3F3DFF),
+      cursorColor: Color.fromARGB(255, 82, 3, 151),
       decoration: InputDecoration(
-        labelText: hint, // 👈 use labelText instead of hintText
+        labelText: hint,
         floatingLabelBehavior: FloatingLabelBehavior.auto,
         prefixIcon: Icon(icon, color: const Color(0xFF7B6CFF)),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: const Color(0xFFF4F6FF),
-
         contentPadding: const EdgeInsets.symmetric(vertical: 18),
-
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(
-            color: Color(0xFF7B6CFF),
+            color: Color.fromARGB(255, 82, 3, 151),
             width: 1,
           ),
         ),
-
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(
-            color: Color(0xFF3F3DFF),
+            color: Color.fromARGB(255, 82, 3, 151),
             width: 2,
           ),
         ),
-
         floatingLabelStyle: const TextStyle(
-          color: Color(0xFF3F3DFF),
-          fontWeight: FontWeight.w600,
+          color: Color.fromARGB(255, 82, 3, 151),
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

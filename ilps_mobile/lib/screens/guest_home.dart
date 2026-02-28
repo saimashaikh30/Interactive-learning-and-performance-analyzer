@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart';
 import 'registration_screen.dart';
 
@@ -14,6 +13,23 @@ class _GuestHomeState extends State<GuestHome>
     with SingleTickerProviderStateMixin {
   final PageController _controller = PageController();
   int _currentPage = 0;
+
+  late AnimationController _borderController;
+
+  @override
+  void initState() {
+    super.initState();
+    _borderController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _borderController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +94,6 @@ class _GuestHomeState extends State<GuestHome>
                   ),
                 ),
 
-                /// ================= DOT INDICATOR =================
                 const SizedBox(height: 15),
                 _buildDotIndicator(),
                 const SizedBox(height: 50),
@@ -90,93 +105,73 @@ class _GuestHomeState extends State<GuestHome>
     );
   }
 
-  ///
-  late AnimationController _borderController;
-
-@override
-void initState() {
-  super.initState();
-  _borderController = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 6), // slower = premium
-  )..repeat();
-}
-
-@override
-void dispose() {
-  _borderController.dispose();
-  super.dispose();
-}
-
-Widget _premiumBorderButton({
-  required String text,
-  required VoidCallback onTap,
-  required double radius,
-  EdgeInsets padding =
-      const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-}) {
-  return GestureDetector(
-    onTap: onTap,
-    child: AnimatedBuilder(
-      animation: _borderController,
-      builder: (context, child) {
-        return Container(
-          padding: const EdgeInsets.all(2.5),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            gradient: SweepGradient(
-              colors: const [
-                Colors.transparent,
-                Color.fromARGB(255, 129, 79, 246),
-                Color.fromARGB(255, 39, 42, 238),
-                Color.fromARGB(255, 117, 71, 222),
-                Colors.transparent,
-              ],
-              stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
-              transform:
-                  GradientRotation(_borderController.value * 6.3),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF8B5CF6)
-                    .withOpacity(0.5),
-                blurRadius: 25,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: Container(
-            padding: padding,
+  Widget _premiumBorderButton({
+    required String text,
+    required VoidCallback onTap,
+    required double radius,
+    EdgeInsets padding =
+        const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedBuilder(
+        animation: _borderController,
+        builder: (context, child) {
+          return Container(
+            padding: const EdgeInsets.all(2.5),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF6366F1),
-                  Color(0xFF8B5CF6),
+              borderRadius: BorderRadius.circular(radius),
+              gradient: SweepGradient(
+                colors: const [
+                  Colors.transparent,
+                  Color.fromARGB(255, 129, 79, 246),
+                  Color.fromARGB(255, 39, 42, 238),
+                  Color.fromARGB(255, 117, 71, 222),
+                  Colors.transparent,
                 ],
+                stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+                transform:
+                    GradientRotation(_borderController.value * 6.3),
               ),
-              borderRadius:
-                  BorderRadius.circular(radius - 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.5),
+                  blurRadius: 25,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-            child: Text(
-              text,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+            child: Container(
+              padding: padding,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF6366F1),
+                    Color(0xFF8B5CF6),
+                  ],
+                ),
+                borderRadius:
+                    BorderRadius.circular(radius - 2.5),
+              ),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
-          ),
-        );
-      },
-    ),
-  );
-}
+          );
+        },
+      ),
+    );
+  }
 
-  /// ================= DOT INDICATOR =================
   Widget _buildDotIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
-        4, // because you have 5 pages
+        4,
         (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 6),
@@ -191,17 +186,16 @@ Widget _premiumBorderButton({
     );
   }
 
-  /// ================= PAGE 1 =================
   Widget _heroPage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 30),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
+          const Text(
             "Interactive Learning\n& Performance System",
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontSize: 30,
               fontWeight: FontWeight.bold,
               height: 1.3,
@@ -209,10 +203,10 @@ Widget _premiumBorderButton({
             ),
           ),
           const SizedBox(height: 25),
-          Text(
+          const Text(
             "Prepare smarter for placements with company-focused and difficulty-based questions.",
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontSize: 16,
               color: Colors.white70,
             ),
@@ -224,16 +218,15 @@ Widget _premiumBorderButton({
     );
   }
 
-  /// ================= PAGE 2 =================
   Widget _featurePage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
+          const Text(
             "Why Choose ILPS?",
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -262,16 +255,15 @@ Widget _premiumBorderButton({
     );
   }
 
-  /// ================= PAGE 3 =================
   Widget _subjectPage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
+          const Text(
             "Subjects",
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -288,17 +280,16 @@ Widget _premiumBorderButton({
     );
   }
 
-  /// ================= PAGE 5 =================
   Widget _finalPage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 30),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
+          const Text(
             "Start your placement preparation journey today and achieve your dream job with ILPS 🚀",
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -311,38 +302,37 @@ Widget _premiumBorderButton({
     );
   }
 
-  /// ================= BUTTONS =================
-Widget _signInButton() {
-  return _premiumBorderButton(
-    text: "Sign In",
-    radius: 30,
-    padding:
-        const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    },
-  );
-}
- Widget _registerButton(String text) {
-  return _premiumBorderButton(
-    text: text,
-    radius: 40,
-    padding:
-        const EdgeInsets.symmetric(horizontal: 45, vertical: 16),
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => const RegistrationScreen()),
-      );
-    },
-  );
-}
+  Widget _signInButton() {
+    return _premiumBorderButton(
+      text: "Sign In",
+      radius: 30,
+      padding:
+          const EdgeInsets.symmetric(horizontal: 25, vertical: 8),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      },
+    );
+  }
 
-  /// ================= CARDS =================
+  Widget _registerButton(String text) {
+    return _premiumBorderButton(
+      text: text,
+      radius: 40,
+      padding:
+          const EdgeInsets.symmetric(horizontal: 45, vertical: 16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const RegistrationScreen()),
+        );
+      },
+    );
+  }
+
   Widget _featureCard(String title, String subtitle, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -366,15 +356,7 @@ Widget _signInButton() {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: GoogleFonts.poppins(
-                        color: Colors.white, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Text(subtitle,
-                    style: GoogleFonts.poppins(
-                        color: Colors.white70, fontSize: 13)),
-              ],
+              children: const [],
             ),
           ),
         ],
@@ -402,9 +384,12 @@ Widget _signInButton() {
           ),
           const SizedBox(width: 15),
           Expanded(
-            child: Text(title,
-                style: GoogleFonts.poppins(
-                    color: Colors.white, fontWeight: FontWeight.w600)),
+            child: Text(
+              title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

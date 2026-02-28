@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.background,
       ),
-      home: const DashboardScreen(),
+      home: const SplashScreen(),
     );
   }
 }
