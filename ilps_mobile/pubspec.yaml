@@ -30,7 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  google_fonts: ^6.2.1
   animate_do: ^3.0.2
   smooth_page_indicator: ^1.1.0
   lottie: ^2.7.0
@@ -38,6 +37,9 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  google_fonts: ^8.0.2
+  google_sign_in: ^5.4.0
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

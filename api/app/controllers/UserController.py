@@ -7,6 +7,7 @@ from app.models import User, AuthProviderEnum, UserRoleEnum
 import requests
 import re
 import secrets
+from flask import current_app
 
 user_bp = Blueprint("user_bp", __name__)
 
@@ -14,23 +15,12 @@ def generate_otp():
     return secrets.randbelow(900000)+100000
 
 def is_valid_name(name):
-    # Only letters and spaces allowed
     return bool(re.fullmatch(r"[A-Za-z ]+", name))
 
-
 def is_valid_email(email):
-    # Simple email regex validation
     return bool(re.fullmatch(r"[^@]+@[^@]+\.[^@]+", email))
 
-
 def is_strong_password(password):
-    """
-    Password rules:
-    - Minimum 8 characters
-    - At least 1 letter
-    - At least 1 number
-    - At least 1 special character
-    """
     return bool(
         re.fullmatch(
             r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
@@ -38,11 +28,25 @@ def is_strong_password(password):
         )
     )
 
+# ================= EMAIL FUNCTION (FIXED) =================
+def sendEmail(subject, to, body):
+    try:
+        # Ensure recipients is always a list
+        if isinstance(to, str):
+            to = [to]
 
-# =========================
-# REGISTER
-# =========================
+        msg = Message(
+            subject=subject,
+            recipients=to,
+            body=body
+        )
+        mail.send(msg)
+        print("Email sent successfully!")
+    except Exception as e:
+        print("Failed to send email:", str(e))
 
+
+# ================= REGISTER =================
 @user_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -56,7 +60,6 @@ def register():
     if not provider:
         return jsonify({"message": "Auth provider is required"}), 400
 
-    # Validate role
     if not role_str or role_str not in [r.value for r in UserRoleEnum]:
         return jsonify({
             "message": f"Invalid role. Must be one of {[r.value for r in UserRoleEnum]}"
@@ -64,33 +67,23 @@ def register():
 
     role = UserRoleEnum(role_str)
 
-    # -------------------------
-    # LOCAL REGISTRATION
-    # -------------------------
     if provider == "local":
         name = data.get("name", "").strip()
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
 
-        # Required fields check
         if not name or not email or not password:
             return jsonify({"message": "Name, email and password are required"}), 400
 
-        # Name validation
         if not is_valid_name(name):
-            return jsonify({
-                "message": "Name must contain only letters and spaces"
-            }), 400
+            return jsonify({"message": "Name must contain only letters and spaces"}), 400
 
-        # Email validation
         if not is_valid_email(email):
             return jsonify({"message": "Invalid email format"}), 400
 
-        # Email uniqueness
         if User.query.filter_by(email=email).first():
             return jsonify({"message": "Email already registered"}), 400
 
-        # Password strength validation
         if not is_strong_password(password):
             return jsonify({
                 "message": "Password must be at least 8 characters long and include at least one letter, one number, and one special character"
@@ -116,9 +109,6 @@ def register():
             "access_token": access_token
         }), 201
 
-    # -------------------------
-    # GOOGLE REGISTRATION
-    # -------------------------
     elif provider == "google":
         token = data.get("access_token")
 
@@ -162,9 +152,9 @@ def register():
 
     else:
         return jsonify({"message": "Invalid auth provider"}), 400
-    
 
 
+# ================= SEND OTP =================
 @user_bp.route("/sendOtp",methods=["POST"])
 def sendOtp():
     data=request.get_json()
@@ -175,31 +165,78 @@ def sendOtp():
     email=data.get("email")
     if not email:
         return jsonify({"message":"Email requires"}),400
-    
+
     user=User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"message":"No account found registered with this email"})
+        return jsonify({"message":"No account found registered with this email"}),404
+
     otp=generate_otp()
+
     try:
-        msg = Message(
-            subject="Forgot Password OTP",
-            recipients=[user.email],
-            body=f"This is your One Time Password(otp):{otp}"
-        )
-        mail.send(msg)
+        current_app.redis_client.setex(f"otp:{email}",300,otp)
+        subject = "Forgot Password OTP"
+        body = f"This is your One Time Password (OTP): {otp}"
+        sendEmail(subject, user.email, body)
     except Exception as e:
         print("Failed to send email:", e)
 
     return jsonify({
-        "message": "Login successful",
-        "role": user.role.value
+        "message": "OTP sent successfully"
     }), 200
 
+@user_bp.route("/verifyOtp", methods=["POST"])
+def verifyOtp():
+    data = request.get_json()
 
-# =========================
-# LOGIN
-# =========================
+    email = data.get("email")
+    otp = data.get("otp")
 
+    if not email or not otp:
+        return jsonify({"message": "Email and OTP required"}), 400
+
+    stored_otp = current_app.redis_client.get(f"otp:{email}")
+
+    if not stored_otp:
+        return jsonify({"message": "OTP expired or not found"}), 400
+
+    if stored_otp != otp:
+        return jsonify({"message": "Invalid OTP"}), 400
+
+    current_app.redis_client.delete(f"otp:{email}")
+
+    return jsonify({"message": "OTP verified"}), 200
+
+
+
+@user_bp.route("/changePassword",methods=["PUT"])
+def changePassword():
+    data=request.get_json()
+
+    if not data:
+        return jsonify({"message": "Invalid request body"}), 400
+    
+    password=data.get("password")
+    email=data.get("email")
+    if not password:
+        return jsonify({"message":"Password required"}),400
+    if not is_strong_password(password):
+            return jsonify({
+                "message": "Password must be at least 8 characters long and include at least one letter, one number, and one special character"
+            }), 400
+
+    hashed_pw = generate_password_hash(password)
+
+    user=User.query.filter_by(email=email).first()
+    if not user:
+            return jsonify({"message": "User not found"}), 404
+    user.password = hashed_pw
+    db.session.commit()
+    return jsonify({
+        "message":"Password Changed Successfully"
+    }),200
+
+
+# ================= LOGIN =================
 @user_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
@@ -212,9 +249,6 @@ def login():
     if not provider:
         return jsonify({"message": "Auth provider required"}), 400
 
-    # -------------------------
-    # LOCAL LOGIN
-    # -------------------------
     if provider == "local":
         email = data.get("email", "").strip().lower()
         password = data.get("password", "")
@@ -236,9 +270,6 @@ def login():
         if not check_password_hash(user.password, password):
             return jsonify({"message": "Invalid credentials"}), 401
 
-    # -------------------------
-    # GOOGLE LOGIN
-    # -------------------------
     elif provider == "google":
         token = data.get("access_token")
 
@@ -275,14 +306,11 @@ def login():
 
     access_token = create_access_token(identity=user.id)
 
-    # ================= SEND EMAIL =================
+    # ===== LOGIN EMAIL =====
     try:
-        msg = Message(
-            subject="Login Notification",
-            recipients=[user.email],
-            body=f"Hello {user.name},\n\nYou just logged into ILPS successfully!"
-        )
-        mail.send(msg)
+        subject = "Login Notification"
+        body = f"Hello {user.name},\n\nYou just logged into ILPS successfully!"
+        sendEmail(subject, user.email, body)
     except Exception as e:
         print("Failed to send email:", e)
 
@@ -293,10 +321,7 @@ def login():
     }), 200
 
 
-# =========================
-# PROTECTED PROFILE
-# =========================
-
+# ================= PROFILE =================
 @user_bp.route("/profile", methods=["GET"])
 @jwt_required()
 def profile():
