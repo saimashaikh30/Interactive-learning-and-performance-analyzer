@@ -18,86 +18,82 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          /// ===== PURPLE GRADIENT BACKGROUND =====
+          // Background gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF5F8CFF), // from
-                  Color(0xFF7B8CFF), // via
-                  Color(0xFF9AD7F5), // to
+                  Color(0xFF5F8CFF),
+                  Color(0xFF7B8CFF),
+                  Color(0xFF9AD7F5),
                 ],
               ),
             ),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  const SizedBox(height: 100),
-
-                  /// ===== REGISTER CARD =====
+                  const SizedBox(height: 60),
+                  // Card container
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 25),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 25, vertical: 35),
+                        horizontal: 25, vertical: 30),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(45),
+                      borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.7),
-                          blurRadius: 40,
-                          offset: const Offset(0, 20),
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
-                        /// TITLE
+                        // Title
                         const Text(
-                          "Register",
+                          "Create New Account",
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Color.fromARGB(255, 5, 5, 5),
                           ),
                         ),
-
-                        const SizedBox(height: 8),
-
+                        const SizedBox(height: 15),
                         const Text(
-                          "Create your account to get started",
+                          "Fill in the details to register",
                           style: TextStyle(
-                            color: Color.fromARGB(255, 127, 125, 125),
                             fontSize: 13,
+                            color: Color.fromARGB(255, 127, 125, 125),
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-
-                        /// FULL NAME
+                        const SizedBox(height: 25),
+                        // Username
                         _buildTextField(
                           hint: "Username",
                           icon: Icons.person_outline,
                         ),
-
-                        const SizedBox(height: 20),
-
-                        /// EMAIL
+                        const SizedBox(height: 15),
+                        // Email
                         _buildTextField(
-                          hint: "email",
+                          hint: "Email",
                           icon: Icons.email_outlined,
                         ),
-
-                        const SizedBox(height: 20),
-
-                        /// PASSWORD
+                        const SizedBox(height: 15),
+                        // Phone Number
                         _buildTextField(
-                          hint: "password",
+                          hint: "Phone Number",
+                          icon: Icons.phone_outlined,
+                        ),
+                        const SizedBox(height: 15),
+                        // Password
+                        _buildTextField(
+                          hint: "Password",
                           icon: Icons.lock_outline,
                           obscure: obscurePassword,
                           suffixIcon: IconButton(
@@ -114,10 +110,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             },
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-
-                        /// CONFIRM PASSWORD
+                        const SizedBox(height: 15),
+                        // Confirm Password
                         _buildTextField(
                           hint: "Confirm Password",
                           icon: Icons.lock_outline,
@@ -137,10 +131,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             },
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-
-                        /// ===== MODERN GRADIENT REGISTER BUTTON =====
+                        const SizedBox(height: 25),
+                        // Register Button
                         SizedBox(
                           width: double.infinity,
                           height: 45,
@@ -148,8 +140,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
                                   const Color.fromARGB(255, 78, 62, 247),
-                              elevation: 6,
-                              shadowColor: const Color(0xFF5C5BFF),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15),
                               ),
@@ -163,20 +153,60 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                               );
                             },
                             child: const Text(
-                              "Create Account", // or "Verify Code"
+                              "Register",
                               style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                       SizedBox(
+                          width: double.infinity,
+                          height: 45,
+                          child: Container(
+                            padding:
+                                const EdgeInsets.all(1), // border thickness
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color.fromARGB(255, 82, 3, 151),
+                                  Color(0xFF3F3DFF),
+                                ],
+                              ),
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
                                 color: Colors.white,
-                                letterSpacing: 0.6,
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide.none,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                ),
+                                onPressed: () {},
+                                icon: Image.asset(
+                                  "assets/images/google.png",
+                                  height: 22,
+                                ),
+                                label: const Text(
+                                  "Sign in with Google",
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.black87,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-
-                        /// BACK TO LOGIN
+                        const SizedBox(height: 25),
+                        // Already have account
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -194,7 +224,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 );
                               },
                               child: const Text(
-                                "Sign In",
+                                "Login",
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF7B6CFF),
@@ -207,14 +237,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 40),
                 ],
               ),
             ),
           ),
-
-          /// BACK BUTTON
+          // Back arrow floating
           Positioned(
             top: 20,
             left: 15,
@@ -246,7 +274,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  /// ===== MODERN TEXTFIELD DESIGN =====
+  // TextField widget
   Widget _buildTextField({
     required String hint,
     required IconData icon,
@@ -255,7 +283,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }) {
     return TextField(
       obscureText: obscure,
-      cursorColor: Color.fromARGB(255, 82, 3, 151),
+      cursorColor: const Color.fromARGB(255, 82, 3, 151),
       decoration: InputDecoration(
         labelText: hint,
         floatingLabelBehavior: FloatingLabelBehavior.auto,
