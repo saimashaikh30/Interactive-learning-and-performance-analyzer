@@ -123,14 +123,11 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-<<<<<<< HEAD
-=======
   flutter_web_plugins:
     dependency: transitive
     description: flutter
     source: sdk
     version: "0.0.0"
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
   glob:
     dependency: transitive
     description:
@@ -143,21 +140,6 @@ packages:
     dependency: "direct main"
     description:
       name: google_fonts
-<<<<<<< HEAD
-      sha256: b1ac0fe2832c9cc95e5e88b57d627c5e68c223b9657f4b96e1487aa9098c7b82
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.2.1"
-  hooks:
-    dependency: transitive
-    description:
-      name: hooks
-      sha256: "7a08a0d684cb3b8fb604b78455d5d352f502b68079f7b80b831c62220ab0a4f6"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.1"
-  http:
-=======
       sha256: db9df7a5898d894eeda4c78143f35c30a243558be439518972366880b80bf88e
       url: "https://pub.dev"
     source: hosted
@@ -171,7 +153,6 @@ packages:
     source: hosted
     version: "5.4.4"
   google_sign_in_android:
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
     dependency: transitive
     description:
       name: google_sign_in_android

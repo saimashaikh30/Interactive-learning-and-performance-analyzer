@@ -2,15 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-=======
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/io_client.dart';
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
 import 'package:ilps_mobile/screens/dashboard_screen.dart';
 import 'package:ilps_mobile/screens/guest_home.dart';
 import 'registration_screen.dart';
 import 'forget_password/verify_code_screen.dart';
+import 'package:ilps_mobile/config/app_config.dart';
 
 final GoogleSignIn _googleSignIn = GoogleSignIn(
   scopes: ['email'],
@@ -44,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
-      await _googleSignIn.signOut(); // Force Google prompt
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
@@ -63,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final response = await ioClient.post(
         Uri.parse(
-            "https://ea6a-2402-3a80-4532-513c-2020-bc21-6b36-241c.ngrok-free.app/users/login"),
+            "${AppConfig.baseUrl}/users/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "authprovider": "google",
@@ -107,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final response = await ioClient.post(
         Uri.parse(
-            "https://ea6a-2402-3a80-4532-513c-2020-bc21-6b36-241c.ngrok-free.app/users/login"),
+            "${AppConfig.baseUrl}/users/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "authprovider": "local",
@@ -157,10 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-<<<<<<< HEAD
 
-=======
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
           SafeArea(
             child: SingleChildScrollView(
               child: Column(
@@ -199,15 +194,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Color.fromARGB(255, 112, 111, 111),
                               fontSize: 13),
                         ),
-<<<<<<< HEAD
-
-                        const SizedBox(height: 30),
-
-                        /// EMAIL FIELD
-=======
                         const SizedBox(height: 35),
                         // Email Field
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
                         _buildTextField(
                           hint: "Email",
                           icon: Icons.email_outlined,
@@ -235,81 +223,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-<<<<<<< HEAD
-
-                        /// FORGOT
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const VerifyCodeScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text(
-                                    "Forgot password?",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF7B6CFF),
-                                      fontWeight: FontWeight.w500,
-                                    
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        /// LOGIN BUTTON
-                        SizedBox(
-                          width: double.infinity,
-                          height: 45,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color.fromARGB(255, 78, 62, 247),
-                              elevation: 6,
-                              shadowColor: const Color(0xFF5C5BFF),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                    15), 
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const DashboardScreen (),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              "Sign In", // or "Verify Code"
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                                letterSpacing: 0.6,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        /// OR
-=======
                         // Forgot password
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
@@ -347,7 +260,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 25),
                         // OR divider
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
                         Row(
                           children: const [
                             Expanded(child: Divider(thickness: 1)),
@@ -362,7 +274,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             Expanded(child: Divider(thickness: 1)),
                           ],
                         ),
-<<<<<<< HEAD
 
                         const SizedBox(height: 20),
 
@@ -394,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                 ),
-                                onPressed: () {},
+                                onPressed: () => signInWithGoogle(context),
                                 icon: Image.asset(
                                   "assets/images/google.png",
                                   height: 22,
@@ -406,44 +317,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                     color: Colors.black87,
                                   ),
                                 ),
-=======
-                        const SizedBox(height: 25),
-                        // Google Sign-In button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 45,
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              side: BorderSide.none,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(35)),
-                            ),
-                            onPressed: () => signInWithGoogle(context),
-                            icon: Image.asset(
-                              "assets/images/google.png",
-                              height: 22,
-                            ),
-                            label: const Text(
-                              "Sign in with Google",
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.black87,
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
                               ),
                             ),
                           ),
                         ),
-<<<<<<< HEAD
-
-                        const SizedBox(height: 20),
-
-                        /// REGISTER
-                        /// REGISTER
-=======
                         const SizedBox(height: 25),
                         // Register
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -477,12 +356,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-<<<<<<< HEAD
 
           /// BACK BUTTON
-=======
-          // Back button
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
           Positioned(
             top: 20,
             left: 15,
@@ -490,8 +365,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: CircleAvatar(
                 backgroundColor: Colors.white.withOpacity(0.2),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new,
-                      color: Colors.white),
+                  icon:
+                      const Icon(Icons.arrow_back_ios_new, color: Colors.white),
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
@@ -507,12 +382,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-<<<<<<< HEAD
-
 //widget for textfield
-=======
-  // TextField builder
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
   Widget _buildTextField({
     required String hint,
     required IconData icon,
@@ -527,48 +397,21 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: InputDecoration(
         labelText: hint,
         floatingLabelBehavior: FloatingLabelBehavior.auto,
-<<<<<<< HEAD
-
-        prefixIcon: Icon(icon, color: Color.fromARGB(255, 82, 3, 151)),
-=======
         prefixIcon: Icon(icon, color: const Color(0xFF7B6CFF)),
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: const Color(0xFFF4F6FF),
         contentPadding: const EdgeInsets.symmetric(vertical: 18),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-<<<<<<< HEAD
-          borderSide: const BorderSide(
-            color: Color.fromARGB(255, 82, 3, 151),
-            width: 1,
-          ),
-=======
-          borderSide:
-              const BorderSide(color: Color(0xFF7B6CFF), width: 1),
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
+          borderSide: const BorderSide(color: Color(0xFF7B6CFF), width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-<<<<<<< HEAD
-          borderSide: const BorderSide(
-            color: Color.fromARGB(255, 82, 3, 151),
-            width: 2,
-          ),
-=======
-          borderSide:
-              const BorderSide(color: Color(0xFF3F3DFF), width: 2),
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
+          borderSide: const BorderSide(color: Color(0xFF3F3DFF), width: 2),
         ),
         floatingLabelStyle: const TextStyle(
-<<<<<<< HEAD
-          color: Color.fromARGB(255, 138, 76, 193),
-          fontWeight: FontWeight.w500,
-        ),
-=======
             color: Color(0xFF3F3DFF), fontWeight: FontWeight.w600),
->>>>>>> bbdb39aaf245ec55730420616a7b444df02cc4b8
       ),
     );
   }
