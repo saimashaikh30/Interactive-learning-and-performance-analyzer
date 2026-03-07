@@ -2,42 +2,42 @@
 
 import { HiX } from "react-icons/hi";
 import Links from "./components/Links";
-
-import SidebarCard from "components/sidebar/componentsrtl/SidebarCard";
+import logo from "assets/img/landing/logo.png";
 import routes from "routes.js";
 
 const Sidebar = ({ open, onClose }) => {
   return (
     <div
-      className={`sm:none duration-175 linear fixed !z-50 flex min-h-full flex-col bg-white pb-10 shadow-2xl shadow-white/5 transition-all dark:!bg-navy-800 dark:text-white md:!z-50 lg:!z-50 xl:!z-0 ${
-        open ? "translate-x-0" : "-translate-x-96"
-      }`}
+      className={`sm:none duration-175 linear fixed !z-50 flex min-h-full flex-col bg-white pb-10 shadow-2xl shadow-black/10 transition-all dark:!bg-navy-800 dark:text-white
+      ${open ? "translate-x-0" : "-translate-x-96"}`}
     >
+      {/* Close Button */}
       <span
-        className="absolute top-4 right-4 block cursor-pointer xl:hidden"
+        className="absolute top-4 right-4 block cursor-pointer xl:hidden text-white"
         onClick={onClose}
       >
         <HiX />
       </span>
 
-      <div className={`mx-[56px] mt-[50px] flex items-center`}>
-        <div className="mt-1 ml-1 h-2.5 font-poppins text-[26px] font-bold uppercase text-navy-700 dark:text-white">
-          LEARNING <span class="font-medium">APP</span>
+      {/* ===== LOGO SECTION (BLUE BACKGROUND) ===== */}
+      <div className="bg-[#0F1E44] px-8 pt-10 pb-6">
+        <div className="flex items-center justify-center">
+          <img
+            src={logo}
+            alt="ILPS Logo"
+            className="h-20 object-contain"
+          />
         </div>
       </div>
-      <div class="mt-[58px] mb-7 h-px bg-gray-300 dark:bg-white/30" />
-      {/* Nav item */}
 
-      <ul className="mb-auto pt-1">
+      {/* Divider */}
+      <div className="h-px bg-blue-200 dark:bg-white/20" />
+
+      {/* ===== MENU SECTION (WHITE BACKGROUND) ===== */}
+      <ul className="mb-auto pt-6 px-4">
         <Links routes={routes} />
       </ul>
 
-      {/* Free Horizon Card
-      <div className="flex justify-center">
-        <SidebarCard />
-      </div> */}
-
-      {/* Nav item end */}
     </div>
   );
 };

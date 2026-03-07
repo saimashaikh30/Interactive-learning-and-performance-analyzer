@@ -14,7 +14,6 @@ function GuestNavbar() {
         <li><a href="#hero">Home</a></li>
         <li><a href="#subjects">Subjects</a></li>
         <li><a href="#features">Features</a></li>
-        <li><a href="#how">How It Works</a></li>
         <li><a href="#stats">Stats</a></li>
       </ul>
 
