@@ -1,6 +1,24 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/io_client.dart';
+import 'package:ilps_mobile/config/app_config.dart';
+import 'package:ilps_mobile/screens/dashboard_screen.dart';
 import 'package:ilps_mobile/screens/guest_home.dart';
+import 'login_screen.dart';
+
+final GoogleSignIn _googleSignIn = GoogleSignIn(
+  scopes: ['email'],
+  serverClientId:
+      "734249540796-a2o85k8cnufm4uibmsq07ccgtb2l9bsq.apps.googleusercontent.com",
+);
+
+// SSL bypass for dev/ngrok (DO NOT use in production)
+final IOClient ioClient = IOClient(
+  HttpClient()..badCertificateCallback = (cert, host, port) => true,
+);
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -12,6 +30,174 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen> {
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
+  bool isLoading = false;
+
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  bool isValidName(String name) {
+    return RegExp(r"^[A-Za-z ]{2,50}$").hasMatch(name);
+  }
+
+  bool isValidEmail(String email) {
+    return RegExp(r"^[^@]+@[^@]+\.[^@]+").hasMatch(email);
+  }
+
+  bool isStrongPassword(String password) {
+    return RegExp(
+      r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$",
+    ).hasMatch(password);
+  }
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> registerManually(BuildContext context) async {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (username.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      showMessage("All fields are required");
+      return;
+    }
+
+    if (!isValidName(username)) {
+      showMessage("Enter a valid username");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      showMessage("Enter a valid email address");
+      return;
+    }
+
+    if (!isStrongPassword(password)) {
+      showMessage(
+        "Password must be at least 8 characters and include letter, number, and special character",
+      );
+      return;
+    }
+
+    if (password != confirmPassword) {
+      showMessage("Passwords do not match");
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await ioClient.post(
+        Uri.parse("${AppConfig.baseUrl}/users/register"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "name": username,
+          "email": email,
+          "password": password,
+          "authprovider": "local",
+          "role":"user"
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        showMessage(data["message"] ?? "Registration successful");
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      } else {
+        showMessage(data["message"] ?? "Registration failed");
+      }
+    } catch (e) {
+      showMessage("Registration failed");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> signUpWithGoogle(BuildContext context) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await _googleSignIn.signOut();
+      final googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final accessToken = googleAuth.accessToken;
+
+      if (accessToken == null) {
+        showMessage("Google access token not found");
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+
+      final response = await ioClient.post(
+        Uri.parse("${AppConfig.baseUrl}/users/register"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "authprovider": "google",
+          "access_token": accessToken,
+          "role":"user"
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        showMessage(data["message"] ?? "Google registration successful");
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      } else {
+        showMessage(data["message"] ?? "Google registration failed");
+      }
+    } catch (e) {
+      showMessage("Google Sign-Up failed");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,16 +218,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
             ),
           ),
+
           SafeArea(
             child: SingleChildScrollView(
               child: Column(
                 children: [
                   const SizedBox(height: 60),
-                  // Card container
+
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 25),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 25, vertical: 30),
+                      horizontal: 25,
+                      vertical: 30,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.85),
                       borderRadius: BorderRadius.circular(30),
@@ -55,13 +244,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ),
                     child: Column(
                       children: [
-                        // Title
                         const Text(
                           "Create New Account",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromARGB(255, 5, 5, 5),
+                            color: Colors.black,
                           ),
                         ),
                         const SizedBox(height: 15),
@@ -73,28 +261,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                         const SizedBox(height: 25),
-                        // Username
+
                         _buildTextField(
                           hint: "Username",
                           icon: Icons.person_outline,
+                          controller: _usernameController,
                         ),
                         const SizedBox(height: 15),
-                        // Email
+
                         _buildTextField(
                           hint: "Email",
                           icon: Icons.email_outlined,
+                          controller: _emailController,
                         ),
                         const SizedBox(height: 15),
-                        // Phone Number
-                        _buildTextField(
-                          hint: "Phone Number",
-                          icon: Icons.phone_outlined,
-                        ),
-                        const SizedBox(height: 15),
-                        // Password
+
+
                         _buildTextField(
                           hint: "Password",
                           icon: Icons.lock_outline,
+                          controller: _passwordController,
                           obscure: obscurePassword,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -111,10 +297,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                         const SizedBox(height: 15),
-                        // Confirm Password
+
                         _buildTextField(
                           hint: "Confirm Password",
                           icon: Icons.lock_outline,
+                          controller: _confirmPasswordController,
                           obscure: obscureConfirmPassword,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -132,7 +319,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                         const SizedBox(height: 25),
-                        // Register Button
+
                         SizedBox(
                           width: double.infinity,
                           height: 45,
@@ -144,30 +331,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 borderRadius: BorderRadius.circular(15),
                               ),
                             ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LoginScreen(),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              "Register",
-                              style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white),
-                            ),
+                            onPressed: isLoading
+                                ? null
+                                : () => registerManually(context),
+                            child: isLoading
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    "Register",
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 15),
-                       SizedBox(
+
+                        SizedBox(
                           width: double.infinity,
                           height: 45,
                           child: Container(
-                            padding:
-                                const EdgeInsets.all(1), // border thickness
+                            padding: const EdgeInsets.all(1),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(15),
                               gradient: const LinearGradient(
@@ -189,13 +381,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     borderRadius: BorderRadius.circular(15),
                                   ),
                                 ),
-                                onPressed: () {},
+                                onPressed: isLoading
+                                    ? null
+                                    : () => signUpWithGoogle(context),
                                 icon: Image.asset(
                                   "assets/images/google.png",
                                   height: 22,
                                 ),
                                 label: const Text(
-                                  "Sign in with Google",
+                                  "Sign up with Google",
                                   style: TextStyle(
                                     fontSize: 15,
                                     color: Colors.black87,
@@ -206,7 +400,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ),
                         ),
                         const SizedBox(height: 25),
-                        // Already have account
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -219,7 +413,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const LoginScreen(),
+                                    builder: (_) => const LoginScreen(),
                                   ),
                                 );
                               },
@@ -237,12 +431,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 40),
                 ],
               ),
             ),
           ),
-          // Back arrow floating
+
           Positioned(
             top: 20,
             left: 15,
@@ -258,11 +453,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     color: Colors.white,
                   ),
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const GuestHome(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const GuestHome()),
                     );
                   },
                 ),
@@ -274,15 +467,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // TextField widget
   Widget _buildTextField({
     required String hint,
     required IconData icon,
     bool obscure = false,
     Widget? suffixIcon,
+    TextEditingController? controller,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return TextField(
+      controller: controller,
       obscureText: obscure,
+      keyboardType: keyboardType,
       cursorColor: const Color.fromARGB(255, 82, 3, 151),
       decoration: InputDecoration(
         labelText: hint,

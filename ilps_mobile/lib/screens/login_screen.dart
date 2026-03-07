@@ -8,6 +8,7 @@ import 'package:ilps_mobile/screens/dashboard_screen.dart';
 import 'package:ilps_mobile/screens/guest_home.dart';
 import 'registration_screen.dart';
 import 'package:ilps_mobile/config/app_config.dart';
+import 'package:ilps_mobile/screens/forgot_password/reset_password_screen.dart';
 
 final GoogleSignIn _googleSignIn = GoogleSignIn(
   scopes: ['email'],
@@ -135,7 +136,8 @@ class _LoginScreenState extends State<LoginScreen> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 25),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.85),
                   borderRadius: BorderRadius.circular(30),
@@ -197,7 +199,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         GestureDetector(
                           onTap: () {
-                            // Navigate to forgot password screen
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const DashboardScreen()),
+                            );
                           },
                           child: const Text(
                             "Forgot password?",
@@ -217,7 +223,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: () => loginManually(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 78, 62, 247),
+                          backgroundColor:
+                              const Color.fromARGB(255, 78, 62, 247),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15)),
                         ),
@@ -264,8 +271,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             label: const Text(
                               "Sign in with Google",
-                              style:
-                                  TextStyle(fontSize: 15, color: Colors.black87),
+                              style: TextStyle(
+                                  fontSize: 15, color: Colors.black87),
                             ),
                           ),
                         ),

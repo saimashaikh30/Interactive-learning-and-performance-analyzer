@@ -53,12 +53,30 @@ class User(db.Model):
         onupdate=datetime.utcnow
     )
 
+class Domain(db.Model):
+    __tablename__="domains"
+
+    domain_id=db.Column(db.Integer,primary_key=True)
+    domain_name=db.Column(db.String(20),nullable=False)
+
+    subjects=db.relationship(
+        "Subject",
+        backref="domain",
+        cascade="all,delete-orphan",
+        lazy=True
+    )
 
 class Subject(db.Model):
     __tablename__ = "subjects"
 
     subject_id = db.Column(db.Integer, primary_key=True)
-    subject_name = db.Column(db.String(100), nullable=False)
+    subject_code=db.Column(db.String(6),nullable=False,unique=True)
+    subject_name = db.Column(db.String(20), nullable=False)
+    domain_id=db.Column(
+        db.Integer,
+        db.ForeignKey("domains.domain_id"),
+        nullable=False
+    )
 
     topics = db.relationship(
         "Topic",
@@ -72,7 +90,7 @@ class Topic(db.Model):
     __tablename__ = "topics"
 
     topic_id = db.Column(db.Integer, primary_key=True)
-    topic_name = db.Column(db.String(100), nullable=False)
+    topic_name = db.Column(db.String(20), nullable=False)
 
     subject_id = db.Column(
         db.Integer,
@@ -89,14 +107,14 @@ class Company(db.Model):
     __tablename__ = "companies"
 
     company_id = db.Column(db.Integer, primary_key=True)
-    company_name = db.Column(db.String(100), unique=True, nullable=False)
+    company_name = db.Column(db.String(30), unique=True, nullable=False)
 
 
 class QuestionType(db.Model):
     __tablename__ = "question_types"
 
     type_id = db.Column(db.Integer, primary_key=True)
-    type_name = db.Column(db.String(50), unique=True, nullable=False)
+    type_name = db.Column(db.String(20), unique=True, nullable=False)
 
 
 class Topic_Questions(db.Model):
@@ -127,8 +145,8 @@ class Question(db.Model):
     )
 
     year = db.Column(db.String(4), nullable=True)
-    technology = db.Column(db.String(50), nullable=True)
-    language = db.Column(db.String(50), nullable=True)
+    technology = db.Column(db.String(20), nullable=True)
+    language = db.Column(db.String(10), nullable=True)
 
     company_id = db.Column(
         db.Integer,
