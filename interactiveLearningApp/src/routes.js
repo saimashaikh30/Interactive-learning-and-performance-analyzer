@@ -3,6 +3,7 @@ import React from "react";
 // Admin Imports
 import MainDashboard from "views/admin/default";
 import Subjects from "views/admin/subjects";
+import Domains from "views/admin/domains";
 import User from "views/admin/user";
 import ContributorRequests from "views/admin/contributorRequests";
 import RTLDefault from "views/rtl/default";
@@ -25,6 +26,7 @@ import {
   MdQuiz,
   MdBarChart,
   MdSettings,
+  MdLayers,
   MdAdminPanelSettings,
 } from "react-icons/md";
 
@@ -53,6 +55,15 @@ const routes = [
     path: "contributor-requests",
     icon: <MdAssignmentTurnedIn className="h-6 w-6" />,
     component: <ContributorRequests/>,
+    roles: ["admin", "super_admin"],
+  },
+
+  {
+    name: "Domains",
+    layout: "/admin",
+    path: "domains",
+    icon: <MdLayers className="h-6 w-6" />,
+    component: <Domains />,
     roles: ["admin", "super_admin"],
   },
 
