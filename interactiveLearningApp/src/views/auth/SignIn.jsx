@@ -13,26 +13,26 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
+
   // ==========================
   // ✅ VALIDATION FUNCTION
   // ==========================
   const validate = () => {
     let newErrors = {};
 
-    // Email validation
     if (!email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = "Enter a valid email address";
     }
 
-    // Password validation
     if (!password) {
       newErrors.password = "Password is required";
     } else if (password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
     } else if (!/[A-Z]/.test(password)) {
-      newErrors.password = "Password must contain at least one uppercase letter";
+      newErrors.password =
+        "Password must contain at least one uppercase letter";
     } else if (!/[0-9]/.test(password)) {
       newErrors.password = "Password must contain at least one number";
     }
@@ -45,25 +45,28 @@ export default function SignIn() {
   // 🔐 LOCAL LOGIN
   // ==========================
   const handleLocalLogin = async () => {
-  if (!validate()) return; // ⛔ stop if invalid
+    if (!validate()) return;
 
-  try {
-    const res = await axios.post("http://127.0.0.1:5000/users/login", {
-      email: email,
-      password: password,
-      authprovider: "local",
-    });
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/users/login", {
+        email: email,
+        password: password,
+        authprovider: "local",
+      });
 
-    localStorage.setItem("access_token", res.data.access_token);
-    if (res.data.role === "user") {
-      navigate("/user", { replace: true });
-    } else {
-      navigate("/admin", { replace: true });
+      // ✅ FIXED STORAGE KEYS
+      localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("role", res.data.role);
+
+      if (res.data.role === "user") {
+        navigate("/user", { replace: true });
+      } else {
+        navigate("/admin", { replace: true });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed");
     }
-  } catch (err) {
-    setError(err.response?.data?.message || "Login failed");
-  }
-};
+  };
 
   // ==========================
   // 🔐 GOOGLE LOGIN
@@ -77,7 +80,9 @@ export default function SignIn() {
           authprovider: "google",
         });
 
-        localStorage.setItem("access_token", res.data.access_token);
+        // ✅ FIXED STORAGE KEYS
+        localStorage.setItem("token", res.data.access_token);
+        localStorage.setItem("role", res.data.role);
 
         if (res.data.role === "user") {
           navigate("/user", { replace: true });
@@ -123,35 +128,26 @@ export default function SignIn() {
         </div>
 
         <div className="space-y-6 w-full">
-        {/* Email */}
-        <InputField
-          label="Email"
-          id="email"
-          type="text"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          state={errors.email}
-        />
+          <InputField
+            label="Email"
+            id="email"
+            type="text"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            state={errors.email}
+          />
 
-        {/* Password */}
-        <InputField
-          label="Password"
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          state={errors.password}
-        />
+          <InputField
+            label="Password"
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            state={errors.password}
+          />
         </div>
 
-        {/* Checkbox */}
         <div className="mb-4 flex items-center justify-between px-2">
-          {/* <div className="flex items-center">
-            <Checkbox />
-            <p className="ml-2 text-sm font-medium text-navy-700 dark:text-white">
-              Keep me logged In
-            </p>
-          </div> */}
           <a
             className="text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-white"
             href="/auth/forgot-password"
@@ -160,7 +156,6 @@ export default function SignIn() {
           </a>
         </div>
 
-        {/* LOGIN BUTTON */}
         <button
           onClick={handleLocalLogin}
           className="linear mt-2 w-full rounded-xl bg-brand-500 py-[12px] text-base font-medium text-white transition duration-200 hover:bg-brand-600 active:bg-brand-700 dark:bg-brand-400 dark:text-white dark:hover:bg-brand-300 dark:active:bg-brand-200"
@@ -169,9 +164,7 @@ export default function SignIn() {
         </button>
 
         {error && (
-          <p className="mt-3 text-sm text-red-500 text-center">
-            {error}
-          </p>
+          <p className="mt-3 text-sm text-red-500 text-center">{error}</p>
         )}
 
         <div className="mt-4">

@@ -2,6 +2,7 @@ import {
   Routes,
   Route,
   Navigate,
+  Outlet,
   useNavigate,
   useLocation,
 } from "react-router-dom";
@@ -43,7 +44,7 @@ export default function Auth() {
     >
       {/* Back Button */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/", { replace: true })}
         className="
           absolute top-6 left-6
           flex items-center gap-2

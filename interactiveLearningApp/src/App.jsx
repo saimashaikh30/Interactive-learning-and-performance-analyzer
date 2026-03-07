@@ -1,28 +1,49 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import UserLayout from "layouts/user";
 import RtlLayout from "layouts/rtl";
 import AdminLayout from "layouts/admin";
+
 import AuthLayout from "layouts/auth";
+import Login from "views/auth/SignIn";
+import Register from "views/auth/SignUp";
+import ForgotPassword from "views/auth/ForgotPassword";
 
 import GuestHome from "./views/landing/GuestHome";
+import UserDashboard from "views/user/dashboard/index";
+import Subjects from "views/user/subjects/index";
+
+import RequireAuth from "./middleware/RequireAuth";
 
 const App = () => {
   return (
     <Routes>
 
-      {/* Landing Page */}
+      {/* Public */}
       <Route path="/" element={<GuestHome />} />
+      {/* AUTH ROUTES */}
+      <Route path="auth" element={<AuthLayout />}>
+        <Route index element={<Navigate to="login" replace />} />
+        <Route path="sign-in" element={<Login />} />
+        <Route path="sign-up" element={<Register />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+      </Route>
 
-      {/* Auth */}
-      <Route path="auth/*" element={<AuthLayout />} />
+      {/* Admin Middleware */}
+      <Route element={<RequireAuth allowedRoles={["admin"]} />}>
+        <Route path="admin/*" element={<AdminLayout />} />
+      </Route>
 
-      {/* Admin */}
-      <Route path="admin/*" element={<AdminLayout />} />
+      {/* User Middleware */}
+      <Route element={<RequireAuth allowedRoles={["user"]} />}>
+        <Route path="user" element={<UserLayout />}>
+          <Route index element={<UserDashboard />} />
+          <Route path="subjects" element={<Subjects />} />
+        </Route>
+      </Route>
 
-      {/* RTL */}
+      {/* RTL (optional protected) */}
       <Route path="rtl/*" element={<RtlLayout />} />
-    <Route path="user/*" element={<UserLayout />} />
 
     </Routes>
   );
