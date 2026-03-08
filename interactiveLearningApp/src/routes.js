@@ -2,11 +2,12 @@ import React from "react";
 
 // Admin Imports
 import MainDashboard from "views/admin/default";
-import NFTMarketplace from "views/admin/marketplace";
-import Profile from "views/admin/profile";
-import DataTables from "views/admin/tables";
+import Subjects from "views/admin/subjects";
+import Domains from "views/admin/domains";
+import User from "views/admin/user";
+import ContributorRequests from "views/admin/contributorRequests";
 import RTLDefault from "views/rtl/default";
-import UserDashboard from "views/user/Dashboard";
+
 
 
 
@@ -18,12 +19,15 @@ import ForgotPassword from "views/auth/ForgotPassword";
 // Icon Imports
 import {
   MdHome,
-  MdSettings,
+  MdPeople,
+  MdAssignmentTurnedIn,
   MdMenuBook,
-  MdHelpOutline,
+  MdCategory,
+  MdQuiz,
   MdBarChart,
-  MdPerson,
-  MdLock,
+  MdSettings,
+  MdLayers,
+  MdAdminPanelSettings,
 } from "react-icons/md";
 
 const routes = [
@@ -33,58 +37,83 @@ const routes = [
     path: "default",
     icon: <MdHome className="h-6 w-6" />,
     component: <MainDashboard />,
-    roles: ["admin", "super_admin"]
+    roles: ["admin", "super_admin"],
   },
 
   {
     name: "Users",
     layout: "/admin",
-    path: "nft-marketplace",
-    icon: <MdPerson className="h-6 w-6" />,
-    //component: <NFTMarketplace />,
-    secondary: true,
-    roles: ["admin", "super_admin"]
+    path: "users",
+    icon: <MdPeople className="h-6 w-6" />,
+    component: <User />,
+    roles: ["admin", "super_admin"],
   },
+
+  {
+    name: "Contributor Requests",
+    layout: "/admin",
+    path: "contributor-requests",
+    icon: <MdAssignmentTurnedIn className="h-6 w-6" />,
+    component: <ContributorRequests/>,
+    roles: ["admin", "super_admin"],
+  },
+
+  {
+    name: "Domains",
+    layout: "/admin",
+    path: "domains",
+    icon: <MdLayers className="h-6 w-6" />,
+    component: <Domains />,
+    roles: ["admin", "super_admin"],
+  },
+
   {
     name: "Subjects",
     layout: "/admin",
+    path: "subjects",
     icon: <MdMenuBook className="h-6 w-6" />,
-    path: "data-tables",
-    //component: <DataTables />,
-    roles: ["admin", "super_admin"]
+    component: <Subjects />,
+    roles: ["admin", "super_admin"],
   },
+
   {
-    name: "Question Requests",
+    name: "Topics",
     layout: "/admin",
-    path: "profile",
-    icon: <MdHelpOutline className="h-6 w-6" />,
-    //component: <Profile />,
-    roles: ["admin", "super_admin"]
+    path: "topics",
+    icon: <MdCategory className="h-6 w-6" />,
+    roles: ["admin", "super_admin"],
   },
-  
+
+  {
+    name: "Questions",
+    layout: "/admin",
+    path: "questions",
+    icon: <MdQuiz className="h-6 w-6" />,
+    roles: ["admin", "super_admin"],
+  },
+
   {
     name: "Reports",
     layout: "/admin",
-    path: "sign-up",
+    path: "reports",
     icon: <MdBarChart className="h-6 w-6" />,
-    //component: <SignUp />,
-    roles: ["admin", "super_admin"]
+    roles: ["admin", "super_admin"],
   },
+
   {
     name: "Profile Settings",
     layout: "/admin",
-    path: "reports",
+    path: "profile",
     icon: <MdSettings className="h-6 w-6" />,
-    //component: <RTLDefault />,
-    roles: ["admin", "super_admin"]
+    roles: ["admin", "super_admin"],
   },
+
   {
     name: "Admin Management",
     layout: "/admin",
     path: "manage_admin",
-    icon: <MdLock className="h-6 w-6" />,
-    //component: <RTLDefault />,
-    roles: ["super_admin"]
+    icon: <MdAdminPanelSettings className="h-6 w-6" />,
+    roles: ["super_admin"],
   },
   {
     name: "Sign In",

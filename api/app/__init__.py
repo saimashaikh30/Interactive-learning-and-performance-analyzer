@@ -37,7 +37,7 @@ def create_app():
 
     from app import models
     from app.controllers.UserController import user_bp
-
+    from app.controllers.DomainsController import domains_bp
     app.register_blueprint(user_bp, url_prefix="/users")
-
+    app.register_blueprint(domains_bp,url_prefix="/domains")
     return app

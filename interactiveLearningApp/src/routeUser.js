@@ -1,37 +1,48 @@
 import React from "react";
-import UserDashboard from "views/user/Dashboard";
+
+// User Imports (FOLDER-BASED ✔)
+import UserDashboard from "views/user/dashboard/index";
+
+// Icon Imports
 import {
   MdHome,
   MdMenuBook,
-  MdFavorite,
-  MdLogout,
+  MdBarChart,
+  MdPerson,
 } from "react-icons/md";
 
 const userRoutes = [
   {
     name: "Dashboard",
     layout: "/user",
-    path: "default",
+    path: "dashboard",
     icon: <MdHome className="h-6 w-6" />,
     component: <UserDashboard />,
+    roles: ["user"],
   },
   {
     name: "Subjects",
     layout: "/user",
     path: "subjects",
     icon: <MdMenuBook className="h-6 w-6" />,
+    component: <div>Subjects Page</div>,
+    roles: ["user"],
   },
   {
-    name: "Favorites",
+    name: "Progress",
     layout: "/user",
-    path: "favorites",
-    icon: <MdFavorite className="h-6 w-6" />,
+    path: "progress",
+    icon: <MdBarChart className="h-6 w-6" />,
+    component: <div>Progress Page</div>,
+    roles: ["user"],
   },
   {
-    name: "Logout",
-    layout: "/auth",
-    path: "sign-in",
-    icon: <MdLogout className="h-6 w-6" />,
+    name: "Profile",
+    layout: "/user",
+    path: "profile",
+    icon: <MdPerson className="h-6 w-6" />,
+    component: <div>User Profile</div>,
+    roles: ["user"],
   },
 ];
 

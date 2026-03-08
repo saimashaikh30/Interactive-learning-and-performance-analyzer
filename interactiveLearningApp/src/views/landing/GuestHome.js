@@ -79,38 +79,7 @@ function GuestHome() {
         </div>
       </section>
 
-      {/* HOW-PROCESS SECTION */}
-
-      <section className="how-process" id="how">
-
-        <h2 className="section-title">How ILPS Works</h2>
-
-        <div className="process-container">
-
-          <div className="process-step">
-            <div className="circle">1</div>
-            <h3>Choose Subject</h3>
-            <p>Select DSA, CN or OS to begin structured preparation.</p>
-          </div>
-
-          <div className="process-line"></div>
-
-          <div className="process-step">
-            <div className="circle">2</div>
-            <h3>Practice Questions</h3>
-            <p>Solve topic-wise and company-wise curated problems.</p>
-          </div>
-
-          <div className="process-line"></div>
-
-          <div className="process-step">
-            <div className="circle">3</div>
-            <h3>Analyze Performance</h3>
-            <p>Track progress and improve weak areas with insights.</p>
-          </div>
-
-        </div>
-      </section>
+      
 
       {/* STATS - NOW BELOW HOW IT WORKS */}
       <section className="stats-bar" id="stats">
@@ -170,7 +139,7 @@ function GuestHome() {
           <a href="/">Home</a>
           <a href="/subjects">Subjects</a>
           <a href="/features">Features</a>
-          <a href="/how-it-works">How It Works</a>
+          <a href="/stats">Stats</a>
         </div>
 
         <div className="footer-copy">
