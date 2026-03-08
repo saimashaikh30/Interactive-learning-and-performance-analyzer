@@ -195,9 +195,11 @@ class _DashboardScreenState extends State<DashboardScreen>
 
           const SizedBox(height: 20),
 
-          // ================= VERTICAL SUBJECT CARDS =================
-          Expanded(
+          // ================= HORIZONTAL SUBJECT CARDS =================
+          SizedBox(
+            height: 160, // IMPORTANT: give height for horizontal list
             child: ListView(
+              scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
                 SubjectCard(
@@ -213,7 +215,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(width: 20),
                 SubjectCard(
                   title: "Computer Network",
                   icon: Icons.wifi_rounded,
@@ -227,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(width: 20),
                 SubjectCard(
                   title: "Operating System",
                   icon: Icons.memory_rounded,
