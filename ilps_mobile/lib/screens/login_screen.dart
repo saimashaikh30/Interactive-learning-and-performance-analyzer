@@ -8,7 +8,7 @@ import 'package:ilps_mobile/screens/dashboard_screen.dart';
 import 'package:ilps_mobile/screens/guest_home.dart';
 import 'registration_screen.dart';
 import 'package:ilps_mobile/config/app_config.dart';
-import 'package:ilps_mobile/screens/forgot_password/reset_password_screen.dart';
+import 'package:ilps_mobile/screens/forgot_password/email_verification.dart';
 
 final GoogleSignIn _googleSignIn = GoogleSignIn(
   scopes: ['email'],
@@ -202,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const DashboardScreen()),
+                                  builder: (_) => const EmailVerificationScreen()),
                             );
                           },
                           child: const Text(

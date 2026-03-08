@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'success_screen.dart';
+import 'package:ilps_mobile/screens/forgot_password/verify_code_screen.dart';
 import 'package:http/io_client.dart';
 import 'package:ilps_mobile/config/app_config.dart';
 import 'dart:convert';
@@ -9,68 +9,69 @@ final IOClient ioClient = IOClient(
   HttpClient()..badCertificateCallback = (cert, host, port) => true,
 );
 
-class ResetPasswordScreen extends StatefulWidget {
-  final String email;
-  const ResetPasswordScreen({super.key, required this.email});
-
+class EmailVerificationScreen extends StatefulWidget {
+  const EmailVerificationScreen({super.key});
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  State<EmailVerificationScreen> createState() =>
+      _EmailVerificationScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  bool _isPasswordHidden = true;
-  bool _isConfirmHidden = true;
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmController = TextEditingController();
+class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void dispose() {
-    _passwordController.dispose();
-    _confirmController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
-//fix needed
-  Future<void> chnagePassword(BuildContext context) async {
-    final password = _passwordController.text.trim();
-    final confirmpassword = _confirmController.text;
-    if (confirmpassword.isEmpty || password.isEmpty) {
+   Future<void> sendOtp(BuildContext context) async {
+    final email = _emailController.text.trim();
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill the passwords")),
-      );
-      return;
-    } else if (confirmpassword != password) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
+        const SnackBar(content: Text("Please fill the email")),
       );
       return;
     }
+
+    if (!emailRegex.hasMatch(email)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please enter a valid email address"),
+        backgroundColor: Colors.orangeAccent,
+      ),
+    );
+    return;
+  }
+
     try {
-      final response = await ioClient.put(
-        Uri.parse("${AppConfig.baseUrl}/users/changePassword"),
+      final response = await ioClient.post(
+        Uri.parse("${AppConfig.baseUrl}/users/sendOtp"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "password": password,
-          "email": widget.email,
+          "email": email,
         }),
       );
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const SuccessScreen()),
+          MaterialPageRoute(builder: (_) => VerifyCodeScreen(email: email)),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? "Password Change failed")),
+          SnackBar(content: Text(data['message'] ?? "Failed to send otp")),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Password Change failed")),
+        const SnackBar(content: Text("Failed to send otp")),
       );
     }
-  }
+   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -100,72 +101,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Reset Password",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  "Email Verification",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
-                const SizedBox(height: 8),
-
-                const Text(
-                  "Enter your new password below.",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
+                const SizedBox(height: 10),
+                // const Text("Enter your email address here"),
+                const SizedBox(height: 20),
+                //textfield
+                _buildTextField(
+                    hint: "Email Address",
+                    icon: Icons.email,
+                    controller: _emailController),
 
                 const SizedBox(height: 20),
-
-                // 🔐 NEW PASSWORD FIELD
-                _buildTextField(
-                  hint: "New Password",
-                  icon: Icons.lock_outline,
-                  obscure: _isPasswordHidden,
-                  controller: _passwordController,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _isPasswordHidden
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                      color: Colors.grey,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordHidden = !_isPasswordHidden;
-                      });
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 15),
-
-                // 🔐 CONFIRM PASSWORD FIELD
-                _buildTextField(
-                  hint: "Confirm Password",
-                  icon: Icons.lock_outline,
-                  obscure: _isConfirmHidden,
-                  controller: _confirmController,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _isConfirmHidden
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                      color: Colors.grey,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isConfirmHidden = !_isConfirmHidden;
-                      });
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // 🔵 BUTTON
+                //button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -177,13 +126,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                     ),
                     onPressed: () {
-                     chnagePassword(context);
+                      sendOtp(context);
                     },
                     child: const Text(
-                      "Reset Password",
+                      "Send Otp",
                       style: TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -199,19 +147,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget _buildTextField({
     required String hint,
     required IconData icon,
-    bool obscure = false,
-    Widget? suffixIcon,
     TextEditingController? controller,
   }) {
     return TextField(
       controller: controller,
-      obscureText: obscure,
+      keyboardType: TextInputType.emailAddress,
       cursorColor: const Color.fromARGB(255, 82, 3, 151),
       decoration: InputDecoration(
         labelText: hint,
         floatingLabelBehavior: FloatingLabelBehavior.auto,
         prefixIcon: Icon(icon, color: const Color(0xFF7B6CFF)),
-        suffixIcon: suffixIcon,
         filled: true,
         fillColor: const Color(0xFFF4F6FF),
         contentPadding: const EdgeInsets.symmetric(vertical: 18),
