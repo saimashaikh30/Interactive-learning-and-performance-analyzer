@@ -1,9 +1,11 @@
 import MiniCalendar from "components/calendar/MiniCalendar";
 import PieChartCard from "views/admin/default/components/PieChartCard";
 import Widget from "components/widget/Widget";
+import { Link } from "react-router-dom";
 
 import {
   MdPerson,
+  MdLayers,
   MdMenuBook,
   MdHelpOutline,
   MdBarChart,
@@ -16,26 +18,34 @@ const Dashboard = () => {
       {/* ================= TOP STATS ================= */}
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-        <Widget
-          icon={<MdPerson className="h-6 w-6" />}
-          title={"Total Users"}
-          subtitle={"120"}
-        />
-        <Widget
-          icon={<MdMenuBook className="h-6 w-6" />}
-          title={"Total Subjects"}
-          subtitle={"3"}
-        />
-        <Widget
-          icon={<MdBarChart className="h-6 w-6" />}
-          title={"Total Topics"}
-          subtitle={"54"}
-        />
-        <Widget
-          icon={<MdHelpOutline className="h-6 w-6" />}
-          title={"Pending Requests"}
-          subtitle={"6"}
-        />
+        <Link to="/admin/domains">
+          <Widget
+            icon={<MdLayers className="h-6 w-6" />}
+            title={"Total Domains"}
+            subtitle={"3"}
+          />
+        </Link>
+        <Link to="/admin/subjects">
+          <Widget
+            icon={<MdMenuBook className="h-6 w-6" />}
+            title={"Total Subjects"}
+            subtitle={"3"}
+          />
+        </Link>
+        <Link to="/admin/topics">
+          <Widget
+            icon={<MdBarChart className="h-6 w-6" />}
+            title={"Total Topics"}
+            subtitle={"54"}
+          />
+        </Link>
+        <Link to="/admin/users">
+          <Widget
+            icon={<MdPerson className="h-6 w-6" />}
+            title={"Total Users"}
+            subtitle={"12"}
+          />
+        </Link>
       </div>
 
       {/* ================= SLIM PENDING STRIP ================= */}
