@@ -28,6 +28,7 @@ class MyApp extends StatelessWidget {
       ),
       // If logged in, go to Dashboard. Otherwise, show Splash or Login.
       home: isLoggedIn ? const DashboardScreen() : const SplashScreen(),
+      // home: const DashboardScreen(),
     );
   }
 }
