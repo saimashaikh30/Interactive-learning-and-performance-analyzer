@@ -3,6 +3,7 @@ import React from "react";
 // Admin Imports
 import MainDashboard from "views/admin/default";
 import Subjects from "views/admin/subjects";
+import Topics from "views/admin/topics";
 import Domains from "views/admin/domains";
 import User from "views/admin/user";
 import ContributorRequests from "views/admin/contributorRequests";
@@ -80,6 +81,7 @@ const routes = [
     name: "Topics",
     layout: "/admin",
     path: "topics",
+    component: <Topics />,
     icon: <MdCategory className="h-6 w-6" />,
     roles: ["admin", "super_admin"],
   },
@@ -89,22 +91,6 @@ const routes = [
     layout: "/admin",
     path: "questions",
     icon: <MdQuiz className="h-6 w-6" />,
-    roles: ["admin", "super_admin"],
-  },
-
-  {
-    name: "Reports",
-    layout: "/admin",
-    path: "reports",
-    icon: <MdBarChart className="h-6 w-6" />,
-    roles: ["admin", "super_admin"],
-  },
-
-  {
-    name: "Profile Settings",
-    layout: "/admin",
-    path: "profile",
-    icon: <MdSettings className="h-6 w-6" />,
     roles: ["admin", "super_admin"],
   },
 

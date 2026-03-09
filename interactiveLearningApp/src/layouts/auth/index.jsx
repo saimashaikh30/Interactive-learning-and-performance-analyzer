@@ -7,7 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import routes from "routes.js";
-import logo from "assets/img/landing/logo.png";
+import logo from "assets/img/landing/ilps3.png";
 import { HiArrowLeft } from "react-icons/hi";
 import {
   HiOutlineBookOpen,
@@ -74,7 +74,7 @@ export default function Auth() {
             `}
           >
             <div className="mb-6">
-              <img src={logo} alt="Logo" className="h-14 object-contain" />
+              <img src={logo} alt="Logo" className="h-20 object-contain" />
             </div>
 
             <Routes>

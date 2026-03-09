@@ -1,41 +1,42 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import DomainTable from "./DomainTable";
-import DomainModal from "./DomainModal";
+import TopicTable from "./TopicTable";
+import TopicModal from "./TopicModal";
 
-const Domains = () => {
+const Topics = () => {
   const [openModal, setOpenModal] = useState(false);
-  const [editDomain, setEditDomain] = useState(null);
-  const [domains, setDomains] = useState([]);
+  const [editTopic, setEditTopic] = useState(null);
+  const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
 
-  const fetchDomains = async () => {
+  const fetchTopics = async () => {
     try {
       setLoading(true);
 
       const res = await axios.get(
-        "http://127.0.0.1:5000/domains/getDomain"
+        "http://127.0.0.1:5000/topics/getTopics"
       );
 
-      setDomains(res.data?.domains || []);
+      setTopics(res.data?.topics || []);
+
     } catch (err) {
-      console.error("Error fetching domains:", err);
+      console.error("Error fetching topics:", err);
 
       setMessage({
         type: "error",
-        text: "Failed to load domains",
+        text: "Failed to load topics",
       });
+
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDomains();
+    fetchTopics();
   }, []);
 
-  // Auto hide message
   useEffect(() => {
     if (!message) return;
 
@@ -44,15 +45,16 @@ const Domains = () => {
     }, 3000);
 
     return () => clearTimeout(timer);
+
   }, [message]);
 
-  const handleAddDomain = () => {
-    setEditDomain(null);
+  const handleAddTopic = () => {
+    setEditTopic(null);
     setOpenModal(true);
   };
 
-  const handleEditDomain = (domain) => {
-    setEditDomain(domain);
+  const handleEditTopic = (topic) => {
+    setEditTopic(topic);
     setOpenModal(true);
   };
 
@@ -62,14 +64,14 @@ const Domains = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">
-          Domain Management
+          Topic Management
         </h1>
 
         <button
-          onClick={handleAddDomain}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+          onClick={handleAddTopic}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
-          + Add Domain
+          + Add Topic
         </button>
       </div>
 
@@ -89,29 +91,30 @@ const Domains = () => {
       {/* Table */}
       {loading ? (
         <div className="py-12 text-center text-gray-500">
-          Loading domains...
+          Loading topics...
         </div>
       ) : (
-        <DomainTable
-          domains={domains}
-          onEdit={handleEditDomain}
-          onRefresh={fetchDomains}
+        <TopicTable
+          topics={topics}
+          onEdit={handleEditTopic}
+          onRefresh={fetchTopics}
           setMessage={setMessage}
         />
       )}
 
       {/* Modal */}
       {openModal && (
-        <DomainModal
-          key={editDomain ? editDomain.domain_id : "new-domain"}
-          initialData={editDomain}
+        <TopicModal
+          key={editTopic ? editTopic.topic_id : "new-topic"}
+          initialData={editTopic}
           onClose={() => setOpenModal(false)}
-          onRefresh={fetchDomains}
+          onRefresh={fetchTopics}
           setMessage={setMessage}
         />
       )}
+
     </div>
   );
 };
 
-export default Domains;
+export default Topics;

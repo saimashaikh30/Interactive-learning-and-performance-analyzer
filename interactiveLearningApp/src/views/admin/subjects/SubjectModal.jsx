@@ -141,7 +141,7 @@ const SubjectModal = ({ initialData, onClose, onSuccess }) => {
           <button
             onClick={onClose}
             disabled={saving}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 bg-white hover:bg-gray-100"
           >
             Cancel
           </button>

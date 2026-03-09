@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { MdEdit, MdDelete } from "react-icons/md";
-import DeleteConfirmModal from "./DeleteConfirmModal";
+import DeleteConfirmModal from "../domains/DeleteConfirmModal";
 
-const DomainTable = ({ domains, onEdit, onRefresh, setMessage }) => {
+const TopicTable = ({ topics, onEdit, onRefresh, setMessage }) => {
 
   const [deleteId, setDeleteId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -15,24 +15,27 @@ const DomainTable = ({ domains, onEdit, onRefresh, setMessage }) => {
       setLoading(true);
 
       const res = await axios.delete(
-        "http://127.0.0.1:5000/domains/deleteDomain",
-        {
-          data: { domain_id: deleteId },
-        }
+        `http://127.0.0.1:5000/topics/deleteTopic/${deleteId}`
       );
 
       setMessage({
         type: "success",
-        text: res.data.message || "Domain deleted successfully",
+        text: res.data?.message || "Topic deleted successfully",
       });
 
       if (onRefresh) onRefresh();
 
     } catch (err) {
+      console.error("Delete topic error:", err);
+
       setMessage({
         type: "error",
-        text: err.response?.data?.message || "Failed to delete domain",
+        text:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to delete topic",
       });
+
     } finally {
       setLoading(false);
       setDeleteId(null);
@@ -47,7 +50,11 @@ const DomainTable = ({ domains, onEdit, onRefresh, setMessage }) => {
           <thead className="bg-gray-100">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                Domain Name
+                Topic Name
+              </th>
+
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                Subject Name
               </th>
 
               <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
@@ -57,37 +64,42 @@ const DomainTable = ({ domains, onEdit, onRefresh, setMessage }) => {
           </thead>
 
           <tbody>
-            {domains.map((d) => (
-              <tr key={d.domain_id} className="border-b hover:bg-gray-50">
+            {topics.map((t) => (
+              <tr key={t.topic_id} className="border-b hover:bg-gray-50">
 
                 <td className="px-6 py-4 font-medium text-gray-900">
-                  {d.domain_name}
+                  {t.topic_name}
+                </td>
+
+                <td className="px-6 py-4 text-gray-700">
+                  {t.subject_name}
                 </td>
 
                 <td className="px-6 py-4 text-right space-x-3">
 
                   <button
-                    onClick={() => onEdit(d)}
+                    onClick={() => onEdit(t)}
                     className="text-blue-600 hover:text-blue-700"
                   >
                     <MdEdit size={18} />
                   </button>
 
                   <button
-                    onClick={() => setDeleteId(d.domain_id)}
+                    onClick={() => setDeleteId(t.topic_id)}
                     className="text-red-500 hover:text-red-600"
                   >
                     <MdDelete size={18} />
                   </button>
 
                 </td>
+
               </tr>
             ))}
 
-            {domains.length === 0 && (
+            {topics.length === 0 && (
               <tr>
-                <td colSpan="2" className="py-8 text-center text-gray-500">
-                  No domains available
+                <td colSpan="3" className="py-8 text-center text-gray-500">
+                  No topics available
                 </td>
               </tr>
             )}
@@ -96,7 +108,6 @@ const DomainTable = ({ domains, onEdit, onRefresh, setMessage }) => {
         </table>
       </div>
 
-      {/* Custom Delete Modal */}
       <DeleteConfirmModal
         open={!!deleteId}
         onClose={() => setDeleteId(null)}
@@ -107,4 +118,4 @@ const DomainTable = ({ domains, onEdit, onRefresh, setMessage }) => {
   );
 };
 
-export default DomainTable;
+export default TopicTable;

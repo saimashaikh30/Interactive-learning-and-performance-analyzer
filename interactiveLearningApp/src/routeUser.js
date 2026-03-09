@@ -1,47 +1,53 @@
 import React from "react";
 
-// User Imports (FOLDER-BASED ✔)
-import UserDashboard from "views/user/dashboard/index";
+// Pages
+import UserDashboard from "views/user/UserDashboard";
+import UserDomains from "views/user/UserDomains";
+import UserSubjects from "views/user/UserSubjects";
+import UserTopics from "views/user/UserTopics";
 
-// Icon Imports
-import {
-  MdHome,
-  MdMenuBook,
-  MdBarChart,
-  MdPerson,
-} from "react-icons/md";
+// Icons (same meaning as sidebar)
+import { FaHome, FaBook, FaUserPlus, FaLaptopCode, FaListAlt } from "react-icons/fa";
 
 const userRoutes = [
   {
-    name: "Dashboard",
+    name: "Home",
     layout: "/user",
-    path: "dashboard",
-    icon: <MdHome className="h-6 w-6" />,
-    component: <UserDashboard />,
+    path: "",
+    icon: <FaHome className="h-5 w-5" />,
+    component: <UserDashboard/>,
+    roles: ["user"],
+  },
+  {
+    name: "Domains",
+    layout: "/user",
+    path: "domains",
+    icon: <FaLaptopCode className="h-5 w-5" />,
+    component: <UserDomains/>,
     roles: ["user"],
   },
   {
     name: "Subjects",
     layout: "/user",
     path: "subjects",
-    icon: <MdMenuBook className="h-6 w-6" />,
-    component: <div>Subjects Page</div>,
+    icon: <FaBook className="h-5 w-5" />,
+    component: <UserSubjects/>,
     roles: ["user"],
   },
   {
-    name: "Progress",
+    name: "Topics",
     layout: "/user",
-    path: "progress",
-    icon: <MdBarChart className="h-6 w-6" />,
-    component: <div>Progress Page</div>,
+    path: "topics",
+    icon: <FaListAlt className="h-5 w-5" />,
+    component: <UserTopics/>,
     roles: ["user"],
   },
   {
-    name: "Profile",
+    name: "Contributor Request",
     layout: "/user",
-    path: "profile",
-    icon: <MdPerson className="h-6 w-6" />,
-    component: <div>User Profile</div>,
+    path: "contributor-request",
+    icon: <FaUserPlus className="h-5 w-5" />,
+    component: () => <div>Contributor Request Page</div>,
     roles: ["user"],
   },
 ];

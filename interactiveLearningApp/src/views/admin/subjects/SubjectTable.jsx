@@ -23,14 +23,6 @@ const SubjectTable = ({ subjects = [], onEdit, onDelete, loading = false }) => {
               Topics
             </th>
 
-            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-              Created At
-            </th>
-
-            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-              Updated At
-            </th>
-
             <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
               Actions
             </th>
@@ -71,13 +63,6 @@ const SubjectTable = ({ subjects = [], onEdit, onDelete, loading = false }) => {
                   </span>
                 </td>
 
-                <td className="px-6 py-4 text-sm text-gray-600">
-                  {s.created_at || "-"}
-                </td>
-
-                <td className="px-6 py-4 text-sm text-gray-600">
-                  {s.updated_at || "-"}
-                </td>
 
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end space-x-3">

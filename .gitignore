@@ -1,0 +1,11 @@
+# Python
+venv/
+api/venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# env
+.env
