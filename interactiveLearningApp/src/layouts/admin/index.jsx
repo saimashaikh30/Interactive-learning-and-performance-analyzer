@@ -33,6 +33,7 @@ export default function Admin(props) {
     }
     return activeRoute;
   };
+  
   const getActiveNavbar = (routes) => {
     let activeNavbar = false;
     for (let i = 0; i < routes.length; i++) {

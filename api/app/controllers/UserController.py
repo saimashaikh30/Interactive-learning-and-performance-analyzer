@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from flask_mail import Message
 from app import db, mail
-from app.models import User, AuthProviderEnum, UserRoleEnum
+from app.models import User,Domain,Subject,Topic ,AuthProviderEnum, UserRoleEnum,Contributor_Request,RequestStatusEnum
 import requests
 import re
 import secrets
@@ -88,7 +88,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
 
         # Send welcome email asynchronously
         subject = "Welcome to ILPS!"
@@ -248,7 +248,7 @@ def login():
     else:
         return jsonify({"message": "Invalid auth provider"}), 400
 
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
 
     # Send login email asynchronously
     subject = "Login Notification"
@@ -258,17 +258,58 @@ def login():
     return jsonify({"message": "Login successful", "access_token": access_token, "role": user.role.value}), 200
 
 # ================= PROFILE =================
-@user_bp.route("/profile", methods=["GET"])
+@user_bp.route("/getProfile", methods=["GET"])
 @jwt_required()
-def profile():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+def getProfile():
+    identity = get_jwt_identity()
+
+    user = None
+
+    try:
+        user = User.query.filter_by(id=int(identity)).first()
+    except (ValueError, TypeError):
+        user = User.query.filter_by(email=identity).first()
+
     if not user:
         return jsonify({"message": "User not found"}), 404
+
     return jsonify({
-        "id": user.id,
-        "name": user.name,
-        "email": user.email,
-        "provider": user.authprovider.value,
-        "role": user.role.value
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role.value,
+            "authprovider": user.authprovider.value
+        }
+    }), 200
+
+@user_bp.route("/getUsers", methods=["GET"])
+def getUsers():
+    users = User.query.all()
+
+    serialized_users = [
+        {
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role.value,
+            "authprovider": u.authprovider.value,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+            "updated_at": u.updated_at.isoformat() if u.updated_at else None
+        }
+        for u in users
+    ]
+
+    return jsonify({"users": serialized_users}), 200
+
+@user_bp.route("/dashboardStats", methods=["GET"])
+def dashboardStats():
+    return jsonify({
+        "domains": Domain.query.count(),
+        "subjects": Subject.query.count(),
+        "topics": Topic.query.count(),
+        "users": User.query.count(),
+        "pending_requests": Contributor_Request.query.filter_by(
+            status=RequestStatusEnum.pending
+        ).count()
     }), 200

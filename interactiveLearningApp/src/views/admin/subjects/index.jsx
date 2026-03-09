@@ -8,17 +8,19 @@ const Subjects = () => {
   const [editSubject, setEditSubject] = useState(null);
   const [subjects, setSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState(null);
 
+  // Fetch all subjects
   const fetchSubjects = async () => {
     try {
       setLoadingSubjects(true);
-      setError("");
-
       const res = await axios.get("http://127.0.0.1:5000/subjects/getSubjects");
       setSubjects(res.data.subjects || []);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load subjects");
+      setMessage({
+        type: "error",
+        text: err.response?.data?.message || "Failed to load subjects",
+      });
     } finally {
       setLoadingSubjects(false);
     }
@@ -28,26 +30,43 @@ const Subjects = () => {
     fetchSubjects();
   }, []);
 
-  const handleDelete = async (subjectId) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this subject?");
-    if (!confirmDelete) return;
+  // Auto-hide success/error messages
+  useEffect(() => {
+    if (!message) return;
 
+    const timer = setTimeout(() => {
+      setMessage(null);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  // Handle delete (called from SubjectTable after confirmation)
+  const handleDelete = async (subjectId) => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/subjects/deleteSubject/${subjectId}`);
+      const res = await axios.delete(
+        `http://127.0.0.1:5000/subjects/deleteSubject/${subjectId}`
+      );
+
+      setMessage({
+        type: "success",
+        text: res.data.message || "Subject deleted successfully",
+      });
+
       fetchSubjects();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete subject");
+      setMessage({
+        type: "error",
+        text: err.response?.data?.message || "Failed to delete subject",
+      });
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <br />
-          <br />
-          <br />
-        </div>
+      {/* Header */}
+      <div className="flex items-center justify-between pt-6">
+        <h1 className="text-2xl font-bold text-gray-800">Subject Management</h1>
 
         <button
           onClick={() => {
@@ -60,12 +79,20 @@ const Subjects = () => {
         </button>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
+      {/* Message */}
+      {message && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm font-medium ${
+            message.type === "success"
+              ? "bg-green-50 border-green-200 text-green-700"
+              : "bg-red-50 border-red-200 text-red-700"
+          }`}
+        >
+          {message.text}
         </div>
       )}
 
+      {/* Subject Table */}
       <SubjectTable
         subjects={subjects}
         loading={loadingSubjects}
@@ -76,6 +103,7 @@ const Subjects = () => {
         onDelete={handleDelete}
       />
 
+      {/* Add/Edit Modal */}
       {openModal && (
         <SubjectModal
           initialData={editSubject}

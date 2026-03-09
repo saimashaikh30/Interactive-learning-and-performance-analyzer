@@ -53,26 +53,29 @@ class User(db.Model):
         onupdate=datetime.utcnow
     )
 
+
 class Domain(db.Model):
-    __tablename__="domains"
+    __tablename__ = "domains"
 
-    domain_id=db.Column(db.Integer,primary_key=True)
-    domain_name=db.Column(db.String(20),nullable=False)
+    domain_id = db.Column(db.Integer, primary_key=True)
+    domain_name = db.Column(db.String(50), unique=True, nullable=False)
 
-    subjects=db.relationship(
+    subjects = db.relationship(
         "Subject",
         backref="domain",
-        cascade="all,delete-orphan",
+        cascade="all, delete-orphan",
         lazy=True
     )
+
 
 class Subject(db.Model):
     __tablename__ = "subjects"
 
     subject_id = db.Column(db.Integer, primary_key=True)
-    subject_code=db.Column(db.String(6),nullable=False,unique=True)
-    subject_name = db.Column(db.String(20), nullable=False)
-    domain_id=db.Column(
+    subject_code = db.Column(db.String(10), nullable=False, unique=True)
+    subject_name = db.Column(db.String(100), nullable=False)
+
+    domain_id = db.Column(
         db.Integer,
         db.ForeignKey("domains.domain_id"),
         nullable=False
@@ -85,12 +88,16 @@ class Subject(db.Model):
         lazy=True
     )
 
+    __table_args__ = (
+        db.UniqueConstraint("subject_name", "domain_id", name="uq_subject_name_domain"),
+    )
+
 
 class Topic(db.Model):
     __tablename__ = "topics"
 
     topic_id = db.Column(db.Integer, primary_key=True)
-    topic_name = db.Column(db.String(20), nullable=False)
+    topic_name = db.Column(db.String(100), nullable=False)
 
     subject_id = db.Column(
         db.Integer,
@@ -99,7 +106,7 @@ class Topic(db.Model):
     )
 
     __table_args__ = (
-        db.UniqueConstraint("topic_name", "subject_id"),
+        db.UniqueConstraint("topic_name", "subject_id", name="uq_topic_name_subject"),
     )
 
 
@@ -107,14 +114,26 @@ class Company(db.Model):
     __tablename__ = "companies"
 
     company_id = db.Column(db.Integer, primary_key=True)
-    company_name = db.Column(db.String(30), unique=True, nullable=False)
+    company_name = db.Column(db.String(100), unique=True, nullable=False)
+
+    questions = db.relationship(
+        "Question",
+        backref="company",
+        lazy=True
+    )
 
 
 class QuestionType(db.Model):
     __tablename__ = "question_types"
 
     type_id = db.Column(db.Integer, primary_key=True)
-    type_name = db.Column(db.String(20), unique=True, nullable=False)
+    type_name = db.Column(db.String(50), unique=True, nullable=False)
+
+    questions = db.relationship(
+        "Question",
+        backref="question_type",
+        lazy=True
+    )
 
 
 class Topic_Questions(db.Model):
@@ -145,8 +164,8 @@ class Question(db.Model):
     )
 
     year = db.Column(db.String(4), nullable=True)
-    technology = db.Column(db.String(20), nullable=True)
-    language = db.Column(db.String(10), nullable=True)
+    technology = db.Column(db.String(50), nullable=True)
+    language = db.Column(db.String(30), nullable=True)
 
     company_id = db.Column(
         db.Integer,
@@ -205,7 +224,7 @@ class Option(db.Model):
     )
 
     option_text = db.Column(db.String(500), nullable=False)
-    is_correct = db.Column(db.Boolean, default=False)
+    is_correct = db.Column(db.Boolean, default=False, nullable=False)
 
 
 class Contributor_Request(db.Model):

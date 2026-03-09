@@ -10,8 +10,10 @@ import Register from "views/auth/SignUp";
 import ForgotPassword from "views/auth/ForgotPassword";
 
 import GuestHome from "./views/landing/GuestHome";
-import UserDashboard from "views/user/dashboard/index";
-import Subjects from "views/user/subjects/index";
+import UserDashboard from "views/user/UserDashboard";
+import UserDomains from "views/user/UserDomains";
+import UserSubjects from "views/user/UserSubjects";
+import UserTopics from "views/user/UserTopics";
 
 import RequireAuth from "./middleware/RequireAuth";
 
@@ -38,7 +40,9 @@ const App = () => {
       <Route element={<RequireAuth allowedRoles={["user"]} />}>
         <Route path="user" element={<UserLayout />}>
           <Route index element={<UserDashboard />} />
-          <Route path="subjects" element={<Subjects />} />
+          <Route path="domains"index element={<UserDomains />} />
+          <Route path="subjects"index element={<UserSubjects />} />
+          <Route path="topics"index element={<UserTopics />} />
         </Route>
       </Route>
 

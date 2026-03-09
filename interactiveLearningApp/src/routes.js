@@ -3,7 +3,11 @@ import React from "react";
 // Admin Imports
 import MainDashboard from "views/admin/default";
 import Subjects from "views/admin/subjects";
+import Topics from "views/admin/topics";
 import Domains from "views/admin/domains";
+import Companies from "views/admin/companies";
+import Questions from "views/admin/questions";
+import AddQuestion from "views/admin/questions/AddQuestion";
 import User from "views/admin/user";
 import ContributorRequests from "views/admin/contributorRequests";
 import RTLDefault from "views/rtl/default";
@@ -24,7 +28,7 @@ import {
   MdMenuBook,
   MdCategory,
   MdQuiz,
-  MdBarChart,
+  MdBusiness,
   MdSettings,
   MdLayers,
   MdAdminPanelSettings,
@@ -80,6 +84,7 @@ const routes = [
     name: "Topics",
     layout: "/admin",
     path: "topics",
+    component: <Topics />,
     icon: <MdCategory className="h-6 w-6" />,
     roles: ["admin", "super_admin"],
   },
@@ -88,23 +93,34 @@ const routes = [
     name: "Questions",
     layout: "/admin",
     path: "questions",
+    component: <Questions />,
     icon: <MdQuiz className="h-6 w-6" />,
     roles: ["admin", "super_admin"],
   },
-
   {
-    name: "Reports",
+    name: "Add Question",
     layout: "/admin",
-    path: "reports",
-    icon: <MdBarChart className="h-6 w-6" />,
+    path: "questions/add",
+    component: <AddQuestion />,
+    icon: <MdQuiz className="h-6 w-6" />,
     roles: ["admin", "super_admin"],
+    hidden: true
   },
-
   {
-    name: "Profile Settings",
+    name: "Edit Question",
     layout: "/admin",
-    path: "profile",
-    icon: <MdSettings className="h-6 w-6" />,
+    path: "questions/edit/:id",
+    component: <AddQuestion />, // same component handles edit via id param
+    icon: <MdQuiz className="h-6 w-6" />,
+    roles: ["admin", "super_admin"],
+    hidden:true
+  },
+  {
+    name: "Companies",
+    layout: "/admin",
+    path: "companies",
+    icon: <MdBusiness className="h-6 w-6" />,
+    component: <Companies />,
     roles: ["admin", "super_admin"],
   },
 

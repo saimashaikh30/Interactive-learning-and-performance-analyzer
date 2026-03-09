@@ -2,7 +2,7 @@
 
 import { HiX } from "react-icons/hi";
 import Links from "./components/Links";
-import logo from "assets/img/landing/logo.png";
+import logo from "assets/img/landing/ilps3.png";
 import routes from "routes.js";
 
 const Sidebar = ({ open, onClose }) => {
@@ -20,12 +20,12 @@ const Sidebar = ({ open, onClose }) => {
       </span>
 
       {/* ===== LOGO SECTION (BLUE BACKGROUND) ===== */}
-      <div className="bg-[#0F1E44] px-8 pt-10 pb-6">
+      <div className="px-8 pt-5 pb-6">
         <div className="flex items-center justify-center">
           <img
             src={logo}
             alt="ILPS Logo"
-            className="h-20 object-contain"
+            className="h-28 object-contain"
           />
         </div>
       </div>
@@ -35,7 +35,13 @@ const Sidebar = ({ open, onClose }) => {
 
       {/* ===== MENU SECTION (WHITE BACKGROUND) ===== */}
       <ul className="mb-auto pt-6 px-4">
-        <Links routes={routes} />
+        <Links
+          routes={routes.filter(
+            (route) =>
+              !route.hidden && // skip hidden routes
+              route.roles?.includes(localStorage.getItem("role"))
+          )}
+        />
       </ul>
 
     </div>
