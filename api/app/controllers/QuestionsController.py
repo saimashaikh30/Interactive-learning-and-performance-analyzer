@@ -9,7 +9,8 @@ from app.models import (
     Company,
     QuestionType,
     User,
-    DifficultyLevelEnum
+    DifficultyLevelEnum,
+    Subject
 )
 
 questions_bp = Blueprint("questions_bp", __name__)
@@ -570,6 +571,58 @@ def filterQuestions():
             "topic_name": topic.topic_name,
             "type_id": type_id,
             "type_name": qtype.type_name,
+            "difficulty_level": difficulty_level
+        },
+        "questions": [serialize_question(q) for q in questions]
+    }), 200
+
+
+
+@questions_bp.route("/getQuestionsBySubject/<int:subject_id>", methods=["GET"])
+def getQuestionsBySubject(subject_id):
+    subject = Subject.query.filter_by(subject_id=subject_id).first()
+
+    if not subject:
+        return jsonify({"message": "Subject not found"}), 404
+
+    topic_id = request.args.get("topic_id", type=int)
+    type_id = request.args.get("type_id", type=int)
+    difficulty_level = request.args.get("difficulty_level", type=str)
+
+    query = (
+        Question.query
+        .join(Topic_Questions, Question.question_id == Topic_Questions.question_id)
+        .join(Topic, Topic.topic_id == Topic_Questions.topic_id)
+        .filter(Topic.subject_id == subject_id)
+    )
+
+    if topic_id is not None:
+        topic = Topic.query.filter_by(topic_id=topic_id, subject_id=subject_id).first()
+        if not topic:
+            return jsonify({"message": "Topic not found for this subject"}), 404
+        query = query.filter(Topic.topic_id == topic_id)
+
+    if type_id is not None:
+        qtype = QuestionType.query.filter_by(type_id=type_id).first()
+        if not qtype:
+            return jsonify({"message": "Question type not found"}), 404
+        query = query.filter(Question.type_id == type_id)
+
+    if difficulty_level is not None:
+        if difficulty_level not in [d.value for d in DifficultyLevelEnum]:
+            return jsonify({"message": "Invalid difficulty_level"}), 400
+        query = query.filter(
+            Question.difficulty_level == DifficultyLevelEnum(difficulty_level)
+        )
+
+    questions = query.order_by(Question.created_at.desc()).distinct().all()
+
+    return jsonify({
+        "subject_id": subject.subject_id,
+        "subject_name": subject.subject_name,
+        "filters": {
+            "topic_id": topic_id,
+            "type_id": type_id,
             "difficulty_level": difficulty_level
         },
         "questions": [serialize_question(q) for q in questions]

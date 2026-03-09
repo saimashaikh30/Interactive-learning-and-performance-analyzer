@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import 'package:ilps_mobile/screens/SubjectTopicsScreen.dart';
 import 'package:ilps_mobile/screens/DomainSubjectsScreen.dart';
 import 'package:ilps_mobile/screens/login_screen.dart';
 import 'package:ilps_mobile/screens/request_main_screen..dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ilps_mobile/config/app_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -17,45 +21,172 @@ class _DashboardScreenState extends State<DashboardScreen>
   String username = "User";
   int _selectedIndex = 0;
 
-  TextEditingController searchController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
-  List<Map<String, dynamic>> domains = [
-    {"id": 1, "name": "Data Structures"},
-    {"id": 2, "name": "Computer Network"},
-    {"id": 3, "name": "Operating System"},
-    {"id": 4, "name": "Database Management"},
-  ];
+  List<Map<String, dynamic>> domains = [];
+  List<Map<String, dynamic>> filteredDomains = [];
+  List<Map<String, dynamic>> subjects = [];
+  List<Map<String, dynamic>> latestQuestions = [];
 
-  List filteredDomains = [];
-
-  List<Map<String, dynamic>> subjects = [
-    {"id": 1, "name": "Arrays"},
-    {"id": 2, "name": "Linked List"},
-    {"id": 3, "name": "Stack"},
-    {"id": 4, "name": "Queue"},
-  ];
-
-  List<Map<String, dynamic>> latestQuestions = [
-    {"id": 1, "question": "What is the time complexity of Binary Search?"},
-    {"id": 2, "question": "Explain the difference between TCP and UDP."},
-    {"id": 3, "question": "What is Deadlock in Operating System?"},
-    {"id": 4, "question": "What is Normalization in DBMS?"},
-  ];
+  bool isLoadingDomains = false;
+  bool isLoadingSubjects = false;
+  bool isLoadingQuestions = false;
 
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    filteredDomains = domains;
 
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat();
+
+    fetchDashboardData();
   }
 
-  // ---------------- SEARCH ----------------
+  Future<void> fetchDashboardData() async {
+    await Future.wait([
+      fetchDomains(),
+      fetchSubjects(),
+      fetchLatestQuestions(),
+    ]);
+  }
+
+  Future<void> fetchDomains() async {
+    setState(() {
+      isLoadingDomains = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("${AppConfig.baseUrl}/domains/getDomain"),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> domainList = data["domains"] ?? [];
+
+        final List<Map<String, dynamic>> loadedDomains = domainList.map((item) {
+          return {
+            "id": item["domain_id"],
+            "name": item["domain_name"],
+          };
+        }).toList();
+
+        setState(() {
+          domains = loadedDomains;
+          filteredDomains = loadedDomains;
+        });
+      } else {
+        showSnackBar(data["message"] ?? "Failed to load domains");
+      }
+    } catch (e) {
+      showSnackBar("Error loading domains");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingDomains = false;
+        });
+      }
+    }
+  }
+
+  Future<void> fetchSubjects() async {
+    setState(() {
+      isLoadingSubjects = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("${AppConfig.baseUrl}/subjects/getSubjects"),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> subjectList = data["subjects"] ?? [];
+
+        final List<Map<String, dynamic>> loadedSubjects =
+            subjectList.map((item) {
+          return {
+            "id": item["subject_id"],
+            "name": item["subject_name"],
+            "code": item["subject_code"],
+            "domain_id": item["domain_id"],
+            "domain_name": item["domain_name"],
+            "topics_count": item["topics_count"] ?? 0,
+          };
+        }).toList();
+
+        setState(() {
+          subjects = loadedSubjects;
+        });
+      } else {
+        showSnackBar(data["message"] ?? "Failed to load subjects");
+      }
+    } catch (e) {
+      showSnackBar("Error loading subjects");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingSubjects = false;
+        });
+      }
+    }
+  }
+
+  Future<void> fetchLatestQuestions() async {
+    setState(() {
+      isLoadingQuestions = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("${AppConfig.baseUrl}/questions/getQuestions"),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> questionList = data["questions"] ?? [];
+
+        final List<Map<String, dynamic>> loadedQuestions =
+            questionList.take(15).map((item) {
+          return {
+            "id": item["question_id"],
+            "question": item["question_string"],
+            "difficulty_level": item["difficulty_level"],
+            "type_name": item["type_name"],
+            "company_name": item["company_name"],
+            "technology": item["technology"],
+            "language": item["language"],
+            "year": item["year"],
+          };
+        }).toList();
+
+        setState(() {
+          latestQuestions = loadedQuestions;
+        });
+      } else {
+        showSnackBar(data["message"] ?? "Failed to load questions");
+      }
+    } catch (e) {
+      showSnackBar("Error loading questions");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingQuestions = false;
+        });
+      }
+    }
+  }
+
   void searchDomain(String query) {
     String search = query.toLowerCase().trim();
 
@@ -84,6 +215,24 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       );
     }
+  }
+
+  void showSnackBar(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    searchController.dispose();
+    super.dispose();
   }
 
   // ---------------- LOGOUT ----------------
@@ -125,13 +274,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    searchController.dispose();
-    super.dispose();
-  }
-
   // ---------------- GREETING ----------------
   String getGreeting() {
     final hour = DateTime.now().hour;
@@ -161,7 +303,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // ---------------- BUILD ----------------
+  Future<void> onRefresh() async {
+    searchController.clear();
+    await fetchDashboardData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,7 +316,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       body: [
         buildHomeScreen(),
         const Center(child: Text("Topic Screen")),
-         const RequestMainScreen(),
+        const RequestMainScreen(),
         const Center(child: Text("Profile Screen")),
       ][_selectedIndex],
 
@@ -197,7 +343,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ---------------- NAV ITEM ----------------
+  Widget buildTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xffEEEAFE),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xff6246EA),
+        ),
+      ),
+    );
+  }
+
   Widget buildNavItem(IconData icon, String label, int index) {
     bool isSelected = _selectedIndex == index;
 

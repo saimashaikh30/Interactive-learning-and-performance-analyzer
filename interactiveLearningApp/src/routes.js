@@ -7,6 +7,7 @@ import Topics from "views/admin/topics";
 import Domains from "views/admin/domains";
 import Companies from "views/admin/companies";
 import Questions from "views/admin/questions";
+import AdminManagement from "views/admin/adminManagement";
 import AddQuestion from "views/admin/questions/AddQuestion";
 import User from "views/admin/user";
 import ContributorRequests from "views/admin/contributorRequests";
@@ -41,7 +42,7 @@ const routes = [
     path: "default",
     icon: <MdHome className="h-6 w-6" />,
     component: <MainDashboard />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
 
   {
@@ -50,7 +51,7 @@ const routes = [
     path: "users",
     icon: <MdPeople className="h-6 w-6" />,
     component: <User />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
 
   {
@@ -59,7 +60,7 @@ const routes = [
     path: "contributor-requests",
     icon: <MdAssignmentTurnedIn className="h-6 w-6" />,
     component: <ContributorRequests/>,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
 
   {
@@ -68,7 +69,7 @@ const routes = [
     path: "domains",
     icon: <MdLayers className="h-6 w-6" />,
     component: <Domains />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
 
   {
@@ -77,7 +78,7 @@ const routes = [
     path: "subjects",
     icon: <MdMenuBook className="h-6 w-6" />,
     component: <Subjects />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
 
   {
@@ -86,7 +87,7 @@ const routes = [
     path: "topics",
     component: <Topics />,
     icon: <MdCategory className="h-6 w-6" />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
 
   {
@@ -95,7 +96,7 @@ const routes = [
     path: "questions",
     component: <Questions />,
     icon: <MdQuiz className="h-6 w-6" />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
   {
     name: "Add Question",
@@ -103,7 +104,7 @@ const routes = [
     path: "questions/add",
     component: <AddQuestion />,
     icon: <MdQuiz className="h-6 w-6" />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
     hidden: true
   },
   {
@@ -112,7 +113,7 @@ const routes = [
     path: "questions/edit/:id",
     component: <AddQuestion />, // same component handles edit via id param
     icon: <MdQuiz className="h-6 w-6" />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
     hidden:true
   },
   {
@@ -121,15 +122,16 @@ const routes = [
     path: "companies",
     icon: <MdBusiness className="h-6 w-6" />,
     component: <Companies />,
-    roles: ["admin", "super_admin"],
+    roles: ["admin", "superadmin"],
   },
 
   {
     name: "Admin Management",
     layout: "/admin",
     path: "manage_admin",
+    component: <AdminManagement />,
     icon: <MdAdminPanelSettings className="h-6 w-6" />,
-    roles: ["super_admin"],
+    roles: ["superadmin"],
   },
   {
     name: "Sign In",
