@@ -32,7 +32,7 @@ const App = () => {
       </Route>
 
       {/* Admin Middleware */}
-      <Route element={<RequireAuth allowedRoles={["admin"]} />}>
+      <Route element={<RequireAuth allowedRoles={["admin", "superadmin"]} />}>
         <Route path="admin/*" element={<AdminLayout />} />
       </Route>
 
