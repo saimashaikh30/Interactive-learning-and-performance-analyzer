@@ -36,8 +36,10 @@ const Sidebar = ({ open, onClose }) => {
       {/* ===== MENU SECTION (WHITE BACKGROUND) ===== */}
       <ul className="mb-auto pt-6 px-4">
         <Links
-          routes={routes.filter((route) =>
-            route.roles?.includes(localStorage.getItem("role"))
+          routes={routes.filter(
+            (route) =>
+              !route.hidden && // skip hidden routes
+              route.roles?.includes(localStorage.getItem("role"))
           )}
         />
       </ul>

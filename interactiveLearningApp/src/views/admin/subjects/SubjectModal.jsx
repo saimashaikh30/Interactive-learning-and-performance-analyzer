@@ -33,8 +33,37 @@ const SubjectModal = ({ initialData, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    if (!subjectName.trim() || !subjectCode.trim() || !domainId) {
-      setError("Please fill all fields");
+
+    const name = subjectName.trim();
+    const code = subjectCode.trim();
+
+    if (!code) {
+      setError("Subject code is required");
+      return;
+    }
+
+    if (!/^[A-Z0-9]{2,10}$/.test(code)) {
+      setError("Subject code must contain only uppercase letters and numbers (e.g. CS101)");
+      return;
+    }
+
+    if (!name) {
+      setError("Subject name is required");
+      return;
+    }
+
+    if (name.length < 3) {
+      setError("Subject name must be at least 3 characters");
+      return;
+    }
+
+    if (!/^[A-Za-z\s]+$/.test(name)) {
+      setError("Subject name can only contain letters");
+      return;
+    }
+
+    if (!domainId) {
+      setError("Please select a domain");
       return;
     }
 
@@ -43,8 +72,8 @@ const SubjectModal = ({ initialData, onClose, onSuccess }) => {
       setError("");
 
       const payload = {
-        subject_name: subjectName.trim(),
-        subject_code: subjectCode.trim(),
+        subject_name: name,
+        subject_code: code,
         domain_id: Number(domainId),
       };
 
@@ -59,6 +88,7 @@ const SubjectModal = ({ initialData, onClose, onSuccess }) => {
 
       onSuccess();
       onClose();
+
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save subject");
     } finally {
