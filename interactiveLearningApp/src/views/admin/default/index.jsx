@@ -31,15 +31,15 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-     const res = await axios.get("http://127.0.0.1:5000/users/dashboardStats");
+      const res = await axios.get("http://127.0.0.1:5000/users/dashboardStats");
 
-setStats({
-  domains: res.data.domains || 0,
-  subjects: res.data.subjects || 0,
-  topics: res.data.topics || 0,
-  users: res.data.users || 0,
-  pendingRequests: res.data.pending_requests || 0,
-});
+      setStats({
+        domains: res.data.domains || 0,
+        subjects: res.data.subjects || 0,
+        topics: res.data.topics || 0,
+        users: res.data.users || 0,
+        pendingRequests: res.data.pending_requests || 0,
+      });
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
     } finally {
@@ -49,7 +49,6 @@ setStats({
 
   return (
     <div className="mt-6 space-y-6">
-      {/* ================= TOP STATS ================= */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
         <Link to="/admin/domains">
           <Widget
@@ -84,27 +83,27 @@ setStats({
         </Link>
       </div>
 
-      {/* ================= SLIM PENDING STRIP ================= */}
-      <div className="rounded-xl bg-white dark:bg-navy-800 px-6 py-3 shadow-sm flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-xl bg-white px-6 py-3 shadow-sm dark:bg-navy-800">
         <div>
           <p className="text-sm text-gray-500 dark:text-gray-300">
-            Pending Question Requests
+            Pending Contributor Requests
           </p>
           <p className="text-xl font-bold text-gray-800 dark:text-white">
             {loading ? "Loading..." : `${stats.pendingRequests} awaiting approval`}
           </p>
         </div>
 
-        <button className="text-sm font-medium text-brand-500 hover:underline">
+        <Link
+          to="/admin/contributor-requests"
+          className="text-sm font-medium text-brand-500 hover:underline"
+        >
           View All
-        </button>
+        </Link>
       </div>
 
-      {/* ================= MAIN CONTENT ================= */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        {/* Pie Chart */}
-        <div className="xl:col-span-4 rounded-xl bg-white dark:bg-navy-800 p-4 shadow-sm">
-          <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-white">
+        <div className="rounded-xl bg-white p-4 shadow-sm dark:bg-navy-800 xl:col-span-4">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-white">
             Pie Chart
           </h3>
 
@@ -115,9 +114,8 @@ setStats({
           </div>
         </div>
 
-        {/* Calendar */}
-        <div className="xl:col-span-4 rounded-xl bg-white dark:bg-navy-800 p-4 shadow-sm">
-          <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-white">
+        <div className="rounded-xl bg-white p-4 shadow-sm dark:bg-navy-800 xl:col-span-4">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-white">
             Calendar
           </h3>
 

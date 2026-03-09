@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import SubjectTable from "./SubjectTable";
 import SubjectModal from "./SubjectModal";
 
@@ -10,7 +11,13 @@ const Subjects = () => {
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // Fetch all subjects
+  const location = useLocation();
+
+  const searchText = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("search") || "").trim().toLowerCase();
+  }, [location.search]);
+
   const fetchSubjects = async () => {
     try {
       setLoadingSubjects(true);
@@ -30,7 +37,6 @@ const Subjects = () => {
     fetchSubjects();
   }, []);
 
-  // Auto-hide success/error messages
   useEffect(() => {
     if (!message) return;
 
@@ -41,7 +47,6 @@ const Subjects = () => {
     return () => clearTimeout(timer);
   }, [message]);
 
-  // Handle delete (called from SubjectTable after confirmation)
   const handleDelete = async (subjectId) => {
     try {
       const res = await axios.delete(
@@ -62,9 +67,22 @@ const Subjects = () => {
     }
   };
 
+  const filteredSubjects = useMemo(() => {
+    if (!searchText) return subjects;
+
+    return subjects.filter((subject) => {
+      return (
+        subject.subject_name?.toLowerCase().includes(searchText) ||
+        subject.subject_code?.toLowerCase().includes(searchText) ||
+        subject.domain_name?.toLowerCase().includes(searchText) ||
+        subject.subject_id?.toString().includes(searchText) ||
+        subject.domain_id?.toString().includes(searchText)
+      );
+    });
+  }, [subjects, searchText]);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between pt-6">
         <h1 className="text-2xl font-bold text-gray-800">Subject Management</h1>
 
@@ -79,7 +97,6 @@ const Subjects = () => {
         </button>
       </div>
 
-      {/* Message */}
       {message && (
         <div
           className={`rounded-lg border px-4 py-3 text-sm font-medium ${
@@ -92,9 +109,8 @@ const Subjects = () => {
         </div>
       )}
 
-      {/* Subject Table */}
       <SubjectTable
-        subjects={subjects}
+        subjects={filteredSubjects}
         loading={loadingSubjects}
         onEdit={(subject) => {
           setEditSubject(subject);
@@ -103,7 +119,6 @@ const Subjects = () => {
         onDelete={handleDelete}
       />
 
-      {/* Add/Edit Modal */}
       {openModal && (
         <SubjectModal
           initialData={editSubject}

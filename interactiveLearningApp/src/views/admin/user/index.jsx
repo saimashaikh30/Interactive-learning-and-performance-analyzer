@@ -1,12 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Card from "components/card";
 import { MdPerson, MdSecurity, MdEdit } from "react-icons/md";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const location = useLocation();
+
+  const searchText = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("search") || "").trim().toLowerCase();
+  }, [location.search]);
 
   useEffect(() => {
     fetchUsers();
@@ -46,6 +54,20 @@ export default function UserManagement() {
 
     return date.toLocaleDateString("en-GB");
   };
+
+  const filteredUsers = useMemo(() => {
+    if (!searchText) return users;
+
+    return users.filter((user) => {
+      return (
+        user.name?.toLowerCase().includes(searchText) ||
+        user.email?.toLowerCase().includes(searchText) ||
+        user.role?.toLowerCase().includes(searchText) ||
+        user.authprovider?.toLowerCase().includes(searchText) ||
+        user.id?.toString().includes(searchText)
+      );
+    });
+  }, [users, searchText]);
 
   return (
     <div className="mt-6">
@@ -95,8 +117,8 @@ export default function UserManagement() {
                     Loading users...
                   </td>
                 </tr>
-              ) : users.length > 0 ? (
-                users.map((user) => (
+              ) : filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
                   <tr
                     key={user.id}
                     className="border-b text-sm text-gray-700 hover:bg-gray-50 dark:text-white dark:hover:bg-navy-700"
@@ -152,7 +174,7 @@ export default function UserManagement() {
                     colSpan="6"
                     className="px-6 py-8 text-center text-sm text-gray-500"
                   >
-                    No users available
+                    No users found
                   </td>
                 </tr>
               )}

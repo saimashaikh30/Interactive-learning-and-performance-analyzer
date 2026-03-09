@@ -1,7 +1,6 @@
 import { useState } from "react";
 import InputField from "components/fields/InputField";
 import { FcGoogle } from "react-icons/fc";
-import Checkbox from "components/checkbox";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -14,11 +13,8 @@ export default function SignIn() {
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
 
-  // ==========================
-  // ✅ VALIDATION FUNCTION
-  // ==========================
   const validate = () => {
-    let newErrors = {};
+    const newErrors = {};
 
     if (!email.trim()) {
       newErrors.email = "Email is required";
@@ -41,54 +37,60 @@ export default function SignIn() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ==========================
-  // 🔐 LOCAL LOGIN
-  // ==========================
+  const saveAuthData = (data) => {
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("role", data.role);
+
+    if (data.user?.id) {
+      localStorage.setItem("user_id", String(data.user.id));
+    }
+    if (data.user?.name) {
+      localStorage.setItem("user_name", data.user.name);
+    }
+    if (data.user?.email) {
+      localStorage.setItem("user_email", data.user.email);
+    }
+  };
+
+  const redirectByRole = (role) => {
+    if (role === "user" || role === "contributor") {
+      navigate("/user", { replace: true });
+    } else {
+      navigate("/admin", { replace: true });
+    }
+  };
+
   const handleLocalLogin = async () => {
+    setError("");
     if (!validate()) return;
 
     try {
       const res = await axios.post("http://127.0.0.1:5000/users/login", {
-        email: email,
-        password: password,
+        email,
+        password,
         authprovider: "local",
       });
 
-      // ✅ FIXED STORAGE KEYS
-      localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("role", res.data.role);
-
-      if (res.data.role === "user") {
-        navigate("/user", { replace: true });
-      } else {
-        navigate("/admin", { replace: true });
-      }
+      saveAuthData(res.data);
+      redirectByRole(res.data.role);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     }
   };
 
-  // ==========================
-  // 🔐 GOOGLE LOGIN
-  // ==========================
   const googleLogin = useGoogleLogin({
     flow: "implicit",
     onSuccess: async (tokenResponse) => {
       try {
+        setError("");
+
         const res = await axios.post("http://127.0.0.1:5000/users/login", {
           access_token: tokenResponse.access_token,
           authprovider: "google",
         });
 
-        // ✅ FIXED STORAGE KEYS
-        localStorage.setItem("token", res.data.access_token);
-        localStorage.setItem("role", res.data.role);
-
-        if (res.data.role === "user") {
-          navigate("/user", { replace: true });
-        } else {
-          navigate("/admin", { replace: true });
-        }
+        saveAuthData(res.data);
+        redirectByRole(res.data.role);
       } catch (err) {
         setError(err.response?.data?.message || "Google login failed");
       }
@@ -99,7 +101,7 @@ export default function SignIn() {
   });
 
   return (
-    <div className="w-full flex justify-center">
+    <div className="flex w-full justify-center">
       <div className="w-full max-w-lg -mx-2">
         <h4 className="mb-2.5 text-4xl font-bold text-navy-700 dark:text-white">
           Sign In
@@ -108,10 +110,9 @@ export default function SignIn() {
           Enter your email and password to sign in!
         </p>
 
-        {/* GOOGLE BUTTON */}
         <div
           onClick={() => googleLogin()}
-          className="mb-6 flex h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-lightPrimary hover:cursor-pointer dark:bg-navy-800"
+          className="mb-6 flex h-[50px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-lightPrimary dark:bg-navy-800"
         >
           <div className="rounded-full text-xl">
             <FcGoogle />
@@ -123,11 +124,11 @@ export default function SignIn() {
 
         <div className="mb-6 flex items-center gap-3">
           <div className="h-px w-full bg-gray-200 dark:bg-navy-700" />
-          <p className="text-base text-gray-600 dark:text-white"> or </p>
+          <p className="text-base text-gray-600 dark:text-white">or</p>
           <div className="h-px w-full bg-gray-200 dark:bg-navy-700" />
         </div>
 
-        <div className="space-y-6 w-full">
+        <div className="w-full space-y-6">
           <InputField
             label="Email"
             id="email"
@@ -164,11 +165,11 @@ export default function SignIn() {
         </button>
 
         {error && (
-          <p className="mt-3 text-sm text-red-500 text-center">{error}</p>
+          <p className="mt-3 text-center text-sm text-red-500">{error}</p>
         )}
 
         <div className="mt-4">
-          <span className=" text-sm font-medium text-navy-700 dark:text-gray-600">
+          <span className="text-sm font-medium text-navy-700 dark:text-gray-600">
             Not registered yet?
           </span>
           <a

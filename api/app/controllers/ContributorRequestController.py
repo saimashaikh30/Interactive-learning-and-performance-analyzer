@@ -230,6 +230,9 @@ def approveContributorRequest():
     if not reviewer:
         return jsonify({"message": "Reviewer not found"}), 404
 
+    if reviewer.role not in [UserRoleEnum.admin, UserRoleEnum.superadmin]:
+        return jsonify({"message": "Only admin or superadmin can approve requests"}), 403
+
     user = User.query.filter_by(id=contributor_request.user_id).first()
     if not user:
         return jsonify({"message": "Requested user not found"}), 404
@@ -255,7 +258,7 @@ def approveContributorRequest():
     except Exception:
         db.session.rollback()
         return jsonify({"message": "Failed to approve contributor request"}), 500
-
+    
 
 # ================= REJECT =================
 
@@ -285,6 +288,9 @@ def rejectContributorRequest():
     if not reviewer:
         return jsonify({"message": "Reviewer not found"}), 404
 
+    if reviewer.role not in [UserRoleEnum.admin, UserRoleEnum.superadmin]:
+        return jsonify({"message": "Only admin or superadmin can reject requests"}), 403
+
     if contributor_request.status == RequestStatusEnum.rejected:
         return jsonify({"message": "Contributor request is already rejected"}), 409
 
@@ -304,8 +310,8 @@ def rejectContributorRequest():
     except Exception:
         db.session.rollback()
         return jsonify({"message": "Failed to reject contributor request"}), 500
-
-
+    
+    
 # ================= REVOKE =================
 
 @contributor_request_bp.route("/revokeContributorRequest", methods=["PUT"])

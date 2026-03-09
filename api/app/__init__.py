@@ -51,7 +51,7 @@ def create_app():
     app.register_blueprint(topics_bp,url_prefix="/topics")
     app.register_blueprint(companies_bp,url_prefix="/companies")
     app.register_blueprint(questions_bp,url_prefix="/questions")
-    app.register_blueprint(contributor_request_bp, url_prefix="/contributorrequests")
+    app.register_blueprint(contributor_request_bp, url_prefix="/contributorRequests")
     app.register_blueprint(question_type_bp, url_prefix="/questionTypes")
     app.register_blueprint(options_bp, url_prefix="/options")
     return app

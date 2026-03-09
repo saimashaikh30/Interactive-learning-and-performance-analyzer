@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import TopicTable from "./TopicTable";
 import TopicModal from "./TopicModal";
 
@@ -10,16 +11,20 @@ const Topics = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
 
+  const location = useLocation();
+
+  const searchText = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("search") || "").trim().toLowerCase();
+  }, [location.search]);
+
   const fetchTopics = async () => {
     try {
       setLoading(true);
 
-      const res = await axios.get(
-        "http://127.0.0.1:5000/topics/getTopics"
-      );
+      const res = await axios.get("http://127.0.0.1:5000/topics/getTopics");
 
       setTopics(res.data?.topics || []);
-
     } catch (err) {
       console.error("Error fetching topics:", err);
 
@@ -27,7 +32,6 @@ const Topics = () => {
         type: "error",
         text: "Failed to load topics",
       });
-
     } finally {
       setLoading(false);
     }
@@ -45,8 +49,21 @@ const Topics = () => {
     }, 3000);
 
     return () => clearTimeout(timer);
-
   }, [message]);
+
+  const filteredTopics = useMemo(() => {
+    if (!searchText) return topics;
+
+    return topics.filter((topic) => {
+      return (
+        topic.topic_name?.toLowerCase().includes(searchText) ||
+        topic.subject_name?.toLowerCase().includes(searchText) ||
+        topic.domain_name?.toLowerCase().includes(searchText) ||
+        topic.topic_id?.toString().includes(searchText) ||
+        topic.subject_id?.toString().includes(searchText)
+      );
+    });
+  }, [topics, searchText]);
 
   const handleAddTopic = () => {
     setEditTopic(null);
@@ -60,8 +77,6 @@ const Topics = () => {
 
   return (
     <div className="p-6 space-y-6">
-
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">
           Topic Management
@@ -75,7 +90,6 @@ const Topics = () => {
         </button>
       </div>
 
-      {/* Message */}
       {message && (
         <div
           className={`rounded-lg border px-4 py-3 text-sm font-medium ${
@@ -88,21 +102,19 @@ const Topics = () => {
         </div>
       )}
 
-      {/* Table */}
       {loading ? (
         <div className="py-12 text-center text-gray-500">
           Loading topics...
         </div>
       ) : (
         <TopicTable
-          topics={topics}
+          topics={filteredTopics}
           onEdit={handleEditTopic}
           onRefresh={fetchTopics}
           setMessage={setMessage}
         />
       )}
 
-      {/* Modal */}
       {openModal && (
         <TopicModal
           key={editTopic ? editTopic.topic_id : "new-topic"}
@@ -112,7 +124,6 @@ const Topics = () => {
           setMessage={setMessage}
         />
       )}
-
     </div>
   );
 };

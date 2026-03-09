@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import DomainTable from "./DomainTable";
 import DomainModal from "./DomainModal";
 
@@ -10,13 +11,18 @@ const Domains = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
 
+  const location = useLocation();
+
+  const searchText = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("search") || "").trim().toLowerCase();
+  }, [location.search]);
+
   const fetchDomains = async () => {
     try {
       setLoading(true);
 
-      const res = await axios.get(
-        "http://127.0.0.1:5000/domains/getDomain"
-      );
+      const res = await axios.get("http://127.0.0.1:5000/domains/getDomain");
 
       setDomains(res.data?.domains || []);
     } catch (err) {
@@ -35,7 +41,6 @@ const Domains = () => {
     fetchDomains();
   }, []);
 
-  // Auto hide message
   useEffect(() => {
     if (!message) return;
 
@@ -45,6 +50,17 @@ const Domains = () => {
 
     return () => clearTimeout(timer);
   }, [message]);
+
+  const filteredDomains = useMemo(() => {
+    if (!searchText) return domains;
+
+    return domains.filter((domain) => {
+      return (
+        domain.domain_name?.toLowerCase().includes(searchText) ||
+        domain.domain_id?.toString().includes(searchText)
+      );
+    });
+  }, [domains, searchText]);
 
   const handleAddDomain = () => {
     setEditDomain(null);
@@ -58,8 +74,6 @@ const Domains = () => {
 
   return (
     <div className="p-6 space-y-6">
-
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">
           Domain Management
@@ -73,7 +87,6 @@ const Domains = () => {
         </button>
       </div>
 
-      {/* Message */}
       {message && (
         <div
           className={`rounded-lg border px-4 py-3 text-sm font-medium ${
@@ -86,21 +99,25 @@ const Domains = () => {
         </div>
       )}
 
-      {/* Table */}
       {loading ? (
         <div className="py-12 text-center text-gray-500">
           Loading domains...
         </div>
       ) : (
         <DomainTable
-          domains={domains}
+          domains={filteredDomains}
           onEdit={handleEditDomain}
           onRefresh={fetchDomains}
           setMessage={setMessage}
         />
       )}
 
-      {/* Modal */}
+      {!loading && filteredDomains.length === 0 && (
+        <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+          No domains found
+        </div>
+      )}
+
       {openModal && (
         <DomainModal
           key={editDomain ? editDomain.domain_id : "new-domain"}

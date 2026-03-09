@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import CompanyTable from "./CompanyTable";
 import CompanyModal from "./CompanyModal";
 
@@ -9,6 +10,13 @@ const Companies = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
+
+  const location = useLocation();
+
+  const searchText = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("search") || "").trim().toLowerCase();
+  }, [location.search]);
 
   const fetchCompanies = async () => {
     try {
@@ -45,6 +53,17 @@ const Companies = () => {
     return () => clearTimeout(timer);
   }, [message]);
 
+  const filteredCompanies = useMemo(() => {
+    if (!searchText) return companies;
+
+    return companies.filter((company) => {
+      return (
+        company.company_name?.toLowerCase().includes(searchText) ||
+        company.company_id?.toString().includes(searchText)
+      );
+    });
+  }, [companies, searchText]);
+
   const handleAddCompany = () => {
     setEditCompany(null);
     setOpenModal(true);
@@ -57,10 +76,9 @@ const Companies = () => {
 
   return (
     <div className="p-6 space-y-6">
-
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">
-          
+          Company Management
         </h1>
 
         <button
@@ -89,7 +107,7 @@ const Companies = () => {
         </div>
       ) : (
         <CompanyTable
-          companies={companies}
+          companies={filteredCompanies}
           onEdit={handleEditCompany}
           onRefresh={fetchCompanies}
           setMessage={setMessage}

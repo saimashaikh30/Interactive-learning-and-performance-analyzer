@@ -34,8 +34,8 @@ const QuestionTypeModal = ({ initialData, onClose, onRefresh, setMessage }) => {
 
     const isEditing = !!initialData?.type_id;
     const url = isEditing
-      ? "http://127.0.0.1:5000/question_types/editQuestionType"
-      : "http://127.0.0.1:5000/question_types/addQuestionType";
+  ? "http://127.0.0.1:5000/questionTypes/editQuestionType"
+  : "http://127.0.0.1:5000/questionTypes/addQuestionType";
 
     const method = isEditing ? "PUT" : "POST";
     const body = isEditing
