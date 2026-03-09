@@ -1,43 +1,53 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import SubjectTable from "./SubjectTable";
 import SubjectModal from "./SubjectModal";
 
 const Subjects = () => {
   const [openModal, setOpenModal] = useState(false);
   const [editSubject, setEditSubject] = useState(null);
+  const [subjects, setSubjects] = useState([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [error, setError] = useState("");
 
-  // dummy UI data (design only)
-  const subjects = [
-    {
-      subject_id: 1,
-      subject_name: "DSA",
-      topics_count: 12,
-      created_at: "12 Feb 2025",
-      updated_at: "18 Feb 2025",
-    },
-    {
-      subject_id: 2,
-      subject_name: "Computer Networks",
-      topics_count: 9,
-      created_at: "10 Feb 2025",
-      updated_at: "20 Feb 2025",
-    },
-    {
-      subject_id: 3,
-      subject_name: "Operating System",
-      topics_count: 15,
-      created_at: "10 Feb 2025",
-      updated_at: "20 Feb 2025",
+  const fetchSubjects = async () => {
+    try {
+      setLoadingSubjects(true);
+      setError("");
+
+      const res = await axios.get("http://127.0.0.1:5000/subjects/getSubjects");
+      setSubjects(res.data.subjects || []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load subjects");
+    } finally {
+      setLoadingSubjects(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  const handleDelete = async (subjectId) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this subject?");
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`http://127.0.0.1:5000/subjects/deleteSubject/${subjectId}`);
+      fetchSubjects();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete subject");
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
-        <br/>
-        <br/>
-        <br/>
+        <div>
+          <br />
+          <br />
+          <br />
+        </div>
 
         <button
           onClick={() => {
@@ -50,20 +60,27 @@ const Subjects = () => {
         </button>
       </div>
 
-      {/* Subjects Table */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
       <SubjectTable
         subjects={subjects}
+        loading={loadingSubjects}
         onEdit={(subject) => {
           setEditSubject(subject);
           setOpenModal(true);
         }}
+        onDelete={handleDelete}
       />
 
-      {/* Modal */}
       {openModal && (
         <SubjectModal
           initialData={editSubject}
           onClose={() => setOpenModal(false)}
+          onSuccess={fetchSubjects}
         />
       )}
     </div>
