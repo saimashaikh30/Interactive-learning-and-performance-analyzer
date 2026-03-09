@@ -8,6 +8,7 @@ import 'package:ilps_mobile/screens/login_screen.dart';
 import 'package:ilps_mobile/screens/request_main_screen..dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ilps_mobile/config/app_config.dart';
+import 'package:ilps_mobile/screens/company_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -43,7 +44,24 @@ class _DashboardScreenState extends State<DashboardScreen>
       duration: const Duration(seconds: 4),
     )..repeat();
 
+    loadUserData();
     fetchDashboardData();
+  }
+
+  Future<void> loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final storedName =
+        prefs.getString("user_name") ??
+        prefs.getString("name") ??
+        prefs.getString("username") ??
+        "User";
+
+    if (!mounted) return;
+
+    setState(() {
+      username = storedName.trim().isNotEmpty ? storedName.trim() : "User";
+    });
   }
 
   Future<void> fetchDashboardData() async {
@@ -235,7 +253,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.dispose();
   }
 
-  // ---------------- LOGOUT ----------------
   void showLogoutDialog() {
     showDialog(
       context: context,
@@ -264,6 +281,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('isLoggedIn');
+    await prefs.remove('user_name');
+    await prefs.remove('name');
+    await prefs.remove('username');
 
     if (!mounted) return;
 
@@ -274,7 +294,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ---------------- GREETING ----------------
   String getGreeting() {
     final hour = DateTime.now().hour;
 
@@ -305,6 +324,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> onRefresh() async {
     searchController.clear();
+    await loadUserData();
     await fetchDashboardData();
   }
 
@@ -312,15 +332,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffF4F6FA),
-
       body: [
         buildHomeScreen(),
-        const Center(child: Text("Topic Screen")),
+        const CompanyScreen(),
         const RequestMainScreen(),
         const Center(child: Text("Profile Screen")),
       ][_selectedIndex],
-
-      // ---------------- NAVBAR ----------------
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: Container(
@@ -333,7 +350,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               buildNavItem(Icons.home_rounded, "Home", 0),
-              buildNavItem(Icons.menu_book_rounded, "Topic", 1),
+              buildNavItem(Icons.menu_book_rounded, "Company", 1),
               buildNavItem(Icons.request_page_rounded, "Request", 2),
               buildNavItem(Icons.person_rounded, "Profile", 3),
             ],
@@ -399,12 +416,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ---------------- HOME SCREEN ----------------
   Widget buildHomeScreen() {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // HEADER
           Container(
             width: double.infinity,
             height: 250,
@@ -471,7 +486,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                             radius: 22,
                             backgroundColor: Colors.white,
                             child: Text(
-                              (username.isNotEmpty ? username[0] : "?")
+                              (username.trim().isNotEmpty
+                                      ? username.trim()[0]
+                                      : "?")
                                   .toUpperCase(),
                               style: const TextStyle(
                                 color: Colors.blue,
@@ -483,10 +500,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 30),
-
-                    // SEARCH BAR
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 15),
                       decoration: BoxDecoration(
@@ -497,6 +511,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         controller: searchController,
                         onChanged: (value) {
                           searchDomain(value);
+                          setState(() {});
                         },
                         decoration: InputDecoration(
                           icon: const Icon(Icons.search),
@@ -520,10 +535,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // DOMAIN TITLE
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Align(
@@ -537,55 +549,62 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
-          // DOMAIN LIST
           SizedBox(
             height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: filteredDomains.length,
-              itemBuilder: (context, index) {
-                final domain = filteredDomains[index];
-
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DomainSubjectsScreen(
-                          domainId: domain["id"],
-                          domainName: domain["name"],
+            child: isLoadingDomains
+                ? const Center(child: CircularProgressIndicator())
+                : filteredDomains.isEmpty
+                    ? const Center(
+                        child: Text(
+                          "No domains available",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: filteredDomains.length,
+                        itemBuilder: (context, index) {
+                          final domain = filteredDomains[index];
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DomainSubjectsScreen(
+                                    domainId: domain["id"],
+                                    domainName: domain["name"],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 12),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xff6246EA),
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Text(
+                                domain["name"],
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(0xff6246EA),
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Text(
-                      domain["name"],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
-
           const SizedBox(height: 25),
-
-          // SUBJECT TITLE
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Align(
@@ -599,74 +618,106 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
-          // SUBJECT LIST
           SizedBox(
-            height: 90,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: subjects.length,
-              itemBuilder: (context, index) {
-                final subject = subjects[index];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(20),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SubjectTopicsScreen(
-                            subjectId: subject["id"],
-                            subjectName: subject["name"],
-                          ),
-                        ),
-                      );
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 150,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 152, 172, 245),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: const Color.fromARGB(255, 105, 124, 245),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
-                      ),
-                      child: Center(
+            height: 120,
+            child: isLoadingSubjects
+                ? const Center(child: CircularProgressIndicator())
+                : subjects.isEmpty
+                    ? const Center(
                         child: Text(
-                          subject["name"],
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color.fromARGB(255, 250, 251, 251),
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                          "No subjects available",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: subjects.length,
+                        itemBuilder: (context, index) {
+                          final subject = subjects[index];
+
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 14),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(22),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SubjectTopicsScreen(
+                                      subjectId: subject["id"],
+                                      subjectName: subject["name"],
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 180,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xff8EA2FF),
+                                      Color(0xff6C7DFF),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(22),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xff6C7DFF)
+                                          .withOpacity(0.25),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      height: 38,
+                                      width: 38,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.20),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.menu_book_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      subject["name"] ?? "",
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.25,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
           ),
-
           const SizedBox(height: 25),
-
-          // LATEST QUESTION TITLE
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Align(
@@ -680,63 +731,77 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
-          ListView.builder(
-            itemCount: latestQuestions.length,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemBuilder: (context, index) {
-              final question = latestQuestions[index];
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    // Later open question detail screen
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromARGB(255, 85, 52, 249)
-                              .withOpacity(0.27),
-                          blurRadius: 13,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.help_outline_rounded,
-                          color: Color(0xff6246EA),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            question["question"],
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
+          isLoadingQuestions
+              ? const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : latestQuestions.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(
+                        child: Text(
+                          "No questions available",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: latestQuestions.length,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemBuilder: (context, index) {
+                        final question = latestQuestions[index];
 
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {},
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        const Color.fromARGB(255, 85, 52, 249)
+                                            .withOpacity(0.27),
+                                    blurRadius: 13,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.help_outline_rounded,
+                                    color: Color(0xff6246EA),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      question["question"] ?? "",
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
           const SizedBox(height: 30),
         ],
       ),

@@ -61,6 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
+        final data = jsonDecode(response.body);
+        await prefs.setString("user_name", data["user"]?["name"] ?? "User");
         await prefs.setBool('isLoggedIn', true);
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -105,19 +107,15 @@ class _LoginScreenState extends State<LoginScreen> {
           "password": password,
         }),
       );
-      
+
+      final data = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        );
-      }
+        await prefs.setString("user_name", data["user"]?["name"] ?? "User");
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200) {
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardScreen()),

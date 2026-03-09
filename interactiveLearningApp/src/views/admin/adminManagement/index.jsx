@@ -1,23 +1,53 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 import UserTable from "./UserTable";
+
+const BASE_URL = "http://127.0.0.1:5000";
 
 const AdminManagement = () => {
   const [users, setUsers] = useState([]);
   const [filterRole, setFilterRole] = useState("");
   const [loading, setLoading] = useState(false);
-  const currentUserId = parseInt(localStorage.getItem("userId"), 10);
+  const [error, setError] = useState("");
 
-  // Fetch users from backend
+  const location = useLocation();
+
+  const currentUserId = Number(
+    localStorage.getItem("user_id") || localStorage.getItem("userId")
+  );
+
+  const searchText = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("search") || "").trim().toLowerCase();
+  }, [location.search]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://127.0.0.1:5000/users/getUsers");
-      // Exclude current superadmin
-      const filtered = res.data.users.filter(u => u.id !== currentUserId);
-      setUsers(filtered);
+      setError("");
+
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("access_token");
+
+      const headers = token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {};
+
+      const res = await axios.get(`${BASE_URL}/users/getUsers`, { headers });
+
+      const allUsers = res.data?.users || [];
+
+      const filteredCurrentUser = allUsers.filter(
+        (user) => user.id !== currentUserId
+      );
+
+      setUsers(filteredCurrentUser);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching users:", err);
+      setError(err.response?.data?.message || "Failed to fetch users");
     } finally {
       setLoading(false);
     }
@@ -27,52 +57,88 @@ const AdminManagement = () => {
     fetchUsers();
   }, []);
 
-  // Handle role change
   const handleRoleChange = async (user, newRole) => {
     try {
-      await axios.put(`http://127.0.0.1:5000/users/changeRole/${user.id}`, {
-        role: newRole
-      });
-      fetchUsers(); // Refresh table
+      setError("");
+
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("access_token");
+
+      const headers = token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {};
+
+      await axios.put(
+        `${BASE_URL}/users/changeRole/${user.id}`,
+        { role: newRole },
+        { headers }
+      );
+
+      fetchUsers();
     } catch (err) {
-      console.error(err);
+      console.error("Error changing role:", err);
+      setError(err.response?.data?.message || "Failed to update user role");
     }
   };
 
-  const filteredUsers = users.filter(u => !filterRole || u.role === filterRole);
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchesRole = !filterRole || user.role === filterRole;
+
+      const matchesSearch =
+        !searchText ||
+        user.name?.toLowerCase().includes(searchText) ||
+        user.email?.toLowerCase().includes(searchText) ||
+        user.role?.toLowerCase().includes(searchText) ||
+        user.authprovider?.toLowerCase().includes(searchText) ||
+        user.id?.toString().includes(searchText);
+
+      return matchesRole && matchesSearch;
+    });
+  }, [users, filterRole, searchText]);
 
   return (
-    <div className="space-y-4">
-      {/* Filter */}
-      <div className="flex items-center gap-2"><br></br>
-      <br/>
-      <br/>
-        <label className="text-sm font-medium text-gray-900">Filter by Role:</label>
-        <select
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-          className="rounded border border-gray-300 px-2 text-gray-900 py-1 text-sm"
-        >
-          <option value="" className="text-gray-700">All</option>
-          <option value="user" className="text-gray-700">User</option>
-          <option value="admin" className="text-gray-700">Admin</option>
-        </select>
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold text-gray-800">Admin Management</h1>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-900">
+            Filter by Role:
+          </label>
+
+          <select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          >
+            <option value="">All</option>
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+            <option value="contributor">Contributor</option>
+          </select>
+        </div>
       </div>
 
-      {/* User Table */}
-      <UserTable
-        users={filteredUsers}
-        onRoleChange={handleRoleChange}
-        currentUserId={currentUserId}
-      />
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-      {/* Pagination placeholder */}
-      {/* <div className="flex justify-center mt-4 gap-2">
-        <button className="px-3 py-1 border rounded hover:bg-gray-100">&lt;</button>
-        <button className="px-3 py-1 border rounded bg-blue-500 text-white">1</button>
-        <button className="px-3 py-1 border rounded hover:bg-gray-100">2</button>
-        <button className="px-3 py-1 border rounded hover:bg-gray-100">&gt;</button>
-      </div> */}
+      {loading ? (
+        <div className="rounded-lg bg-white px-4 py-10 text-center text-gray-500 shadow-sm">
+          Loading users...
+        </div>
+      ) : (
+        <UserTable
+          users={filteredUsers}
+          onRoleChange={handleRoleChange}
+          currentUserId={currentUserId}
+        />
+      )}
     </div>
   );
 };
