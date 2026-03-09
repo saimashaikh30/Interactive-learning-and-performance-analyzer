@@ -38,6 +38,11 @@ def create_app():
     from app import models
     from app.controllers.UserController import user_bp
     from app.controllers.DomainsController import domains_bp
+    from app.controllers.StudentsController import subjects_bp
+    from app.controllers.TopicsController import topics_bp
     app.register_blueprint(user_bp, url_prefix="/users")
     app.register_blueprint(domains_bp,url_prefix="/domains")
+    app.register_blueprint(subjects_bp,url_prefix="/subjects")
+    app.register_blueprint(topics_bp,url_prefix="/topics")
+    
     return app
