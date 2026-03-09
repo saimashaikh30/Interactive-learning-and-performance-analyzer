@@ -41,9 +41,17 @@ def create_app():
     from app.controllers.SubjectsController import subjects_bp
     from app.controllers.TopicsController import topics_bp
     from app.controllers.CompaniesController import companies_bp
+    from app.controllers.QuestionsController import questions_bp
+    from app.controllers.ContributorRequestController import contributor_request_bp
+    from app.controllers.QuestionTypeController import question_type_bp
+    from app.controllers.OptionsController import options_bp
     app.register_blueprint(user_bp, url_prefix="/users")
     app.register_blueprint(domains_bp,url_prefix="/domains")
     app.register_blueprint(subjects_bp,url_prefix="/subjects")
     app.register_blueprint(topics_bp,url_prefix="/topics")
     app.register_blueprint(companies_bp,url_prefix="/companies")
+    app.register_blueprint(questions_bp,url_prefix="/questions")
+    app.register_blueprint(contributor_request_bp, url_prefix="/contributorrequests")
+    app.register_blueprint(question_type_bp, url_prefix="/questionTypes")
+    app.register_blueprint(options_bp, url_prefix="/options")
     return app

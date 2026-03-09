@@ -9,6 +9,7 @@ import 'package:ilps_mobile/screens/guest_home.dart';
 import 'registration_screen.dart';
 import 'package:ilps_mobile/config/app_config.dart';
 import 'package:ilps_mobile/screens/forgot_password/email_verification.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final GoogleSignIn _googleSignIn = GoogleSignIn(
   scopes: ['email'],
@@ -58,6 +59,15 @@ class _LoginScreenState extends State<LoginScreen> {
         }),
       );
 
+      if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      }
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         Navigator.pushReplacement(
@@ -95,6 +105,17 @@ class _LoginScreenState extends State<LoginScreen> {
           "password": password,
         }),
       );
+      
+      if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+        );
+      }
+
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         Navigator.pushReplacement(
@@ -202,7 +223,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const EmailVerificationScreen()),
+                                  builder: (_) =>
+                                      const EmailVerificationScreen()),
                             );
                           },
                           child: const Text(
