@@ -1,4 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:google_fonts/google_fonts.dart';
+
+import 'package:ilps_mobile/config/app_config.dart';
 import 'package:ilps_mobile/screens/SubjectTopicsScreen.dart';
 
 class DomainSubjectsScreen extends StatefulWidget {
@@ -16,238 +21,302 @@ class DomainSubjectsScreen extends StatefulWidget {
 }
 
 class _DomainSubjectsScreenState extends State<DomainSubjectsScreen> {
-
-  // SEARCH VARIABLES
   bool isSearching = false;
-  TextEditingController searchController = TextEditingController();
+  bool isLoading = false;
 
-  List filteredSubjects = [];
+  final TextEditingController searchController = TextEditingController();
 
-  // Static subject data
-  List<Map<String, dynamic>> subjects = [
-    {"id": 1, "domain_id": 1, "name": "Arrays"},
-    {"id": 2, "domain_id": 1, "name": "Linked List"},
-    {"id": 3, "domain_id": 1, "name": "Stack"},
-    {"id": 4, "domain_id": 1, "name": "Queue"},
-  ];
+  List<Map<String, dynamic>> allSubjects = [];
+  List<Map<String, dynamic>> filteredSubjects = [];
 
   @override
   void initState() {
     super.initState();
-
-    // Filter subjects based on selected domain
-    filteredSubjects =
-        subjects.where((s) => s["domain_id"] == widget.domainId).toList();
+    fetchSubjectsByDomain();
   }
 
-  // SEARCH FUNCTION
+  Future<void> fetchSubjectsByDomain() async {
+    setState(() => isLoading = true);
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+            "${AppConfig.baseUrl}/subjects/getSubjectsByDomain/${widget.domainId}"),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final List list = data["subjects"] ?? [];
+
+        final loaded = list.map((item) {
+          return {
+            "id": item["subject_id"],
+            "name": item["subject_name"],
+            "code": item["subject_code"],
+            "topics_count": item["topics_count"]
+          };
+        }).toList();
+
+        setState(() {
+          allSubjects = List<Map<String, dynamic>>.from(loaded);
+          filteredSubjects = allSubjects;
+        });
+      }
+    } catch (e) {
+      showSnackBar("Error loading subjects");
+    }
+
+    setState(() => isLoading = false);
+  }
+
   void searchData(String query) {
+    String q = query.toLowerCase();
 
-    String search = query.toLowerCase().trim();
-
-    final domainSubjects =
-        subjects.where((s) => s["domain_id"] == widget.domainId).toList();
-
-    if (search.isEmpty) {
-      setState(() {
-        filteredSubjects = domainSubjects;
-      });
+    if (q.isEmpty) {
+      setState(() => filteredSubjects = allSubjects);
       return;
     }
 
-    final results = domainSubjects.where((subject) {
-      final name = subject["name"].toString().toLowerCase();
-      return name.contains(search);
-    }).toList();
-
     setState(() {
-      filteredSubjects = results;
+      filteredSubjects = allSubjects.where((s) {
+        return s["name"].toLowerCase().contains(q) ||
+            s["code"].toLowerCase().contains(q);
+      }).toList();
     });
+  }
+
+  void showSnackBar(String msg) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Widget infoChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xffEEF1FF),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xff4F46E5),
+        ),
+      ),
+    );
+  }
+
+  Widget subjectCard(Map subject, int index) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SubjectTopicsScreen(
+              subjectId: subject["id"],
+              subjectName: subject["name"],
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 107, 100, 238),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                "${index + 1}",
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  Text(
+                    subject["name"],
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Row(
+                    children: [
+                      if (subject["code"] != null)
+                        infoChip(subject["code"]),
+
+                      const SizedBox(width: 6),
+
+                      infoChip("${subject["topics_count"]} topics"),
+                    ],
+                  )
+                ],
+              ),
+            ),
+
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: Colors.grey,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      backgroundColor: const Color(0xffF5F7FF),
+      backgroundColor: const Color(0xffF6F7FB),
 
       appBar: AppBar(
-        backgroundColor: const Color(0xff4F46E5),
+        backgroundColor: const Color.fromARGB(255, 104, 97, 239),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
 
         title: isSearching
-            ? Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
+            ? TextField(
+                controller: searchController,
+                autofocus: true,
+                onChanged: searchData,
+                decoration: InputDecoration(
+                  hintText: "Search subject",
+                  hintStyle: GoogleFonts.inter(fontSize: 13),
+                  border: InputBorder.none,
                 ),
-                child: TextField(
-                  controller: searchController,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: "Search subject...",
-                    border: InputBorder.none,
-                    prefixIcon: Icon(Icons.search),
-                    contentPadding: EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  onChanged: (value) {
-                    searchData(value);
-                  },
-                ),
+                style: GoogleFonts.inter(color: Colors.white),
               )
             : Text(
                 widget.domainName,
-                style: const TextStyle(
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
                 ),
               ),
 
         actions: [
           IconButton(
             icon: Icon(isSearching ? Icons.close : Icons.search),
-            color: Colors.white,
             onPressed: () {
               setState(() {
-
                 if (isSearching) {
                   searchController.clear();
-
-                  filteredSubjects = subjects
-                      .where((s) => s["domain_id"] == widget.domainId)
-                      .toList();
+                  filteredSubjects = allSubjects;
                 }
-
                 isSearching = !isSearching;
               });
             },
-          ),
+          )
         ],
       ),
 
-      body: Column(
-        children: [
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
 
-          const SizedBox(height: 20),
+        child: Column(
+          children: [
 
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Subjects",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+            const SizedBox(height: 15),
+
+            Row(
+              children: [
+                Text(
+                  "Subjects",
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ),
-          ),
 
-          const SizedBox(height: 10),
+                const Spacer(),
 
-          if (filteredSubjects.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                "Subject not found",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: filteredSubjects.length,
-              itemBuilder: (context, index) {
-
-                final subject = filteredSubjects[index];
-
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SubjectTopicsScreen(
-                          subjectId: subject["id"],
-                          subjectName: subject["name"],
-                        ),
-                      ),
-                    );
-                  },
-
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color.fromARGB(255, 66, 8, 238)
-                              .withOpacity(0.10),
-                          blurRadius: 20,
-                          offset: const Offset(0, 30),
-                        )
-                      ],
-                    ),
-
-                    child: Row(
-                      children: [
-
-                        Container(
-                          width: 35,
-                          height: 35,
-                          alignment: Alignment.center,
-
-                          decoration: BoxDecoration(
-                            color: const Color(0xff4F46E5),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-
-                          child: Text(
-                            "${index + 1}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 12),
-
-                        Expanded(
-                          child: Text(
-                            subject["name"],
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                      ],
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xffECEBFF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    filteredSubjects.length.toString(),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xff4F46E5),
                     ),
                   ),
-                );
-              },
+                )
+              ],
             ),
-          ),
-        ],
+
+            const SizedBox(height: 12),
+
+            if (isLoading)
+              const Expanded(
+                child: Center(child: CircularProgressIndicator()),
+              )
+
+            else if (filteredSubjects.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Text(
+                    "No subjects found",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              )
+
+            else
+              Expanded(
+                child: ListView.builder(
+                  itemCount: filteredSubjects.length,
+                  itemBuilder: (context, index) =>
+                      subjectCard(filteredSubjects[index], index),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

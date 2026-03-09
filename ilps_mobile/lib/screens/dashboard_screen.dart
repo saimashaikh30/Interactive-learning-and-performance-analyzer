@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import 'package:ilps_mobile/screens/SubjectTopicsScreen.dart';
 import 'package:ilps_mobile/screens/DomainSubjectsScreen.dart';
+import 'package:ilps_mobile/config/app_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,34 +17,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
 
-  TextEditingController searchController = TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
-  // Domain List
-  List<Map<String, dynamic>> domains = [
-    {"id": 1, "name": "Data Structures"},
-    {"id": 2, "name": "Computer Network"},
-    {"id": 3, "name": "Operating System"},
-    {"id": 4, "name": "Database Management"},
-  ];
+  List<Map<String, dynamic>> domains = [];
+  List<Map<String, dynamic>> filteredDomains = [];
+  List<Map<String, dynamic>> subjects = [];
+  List<Map<String, dynamic>> latestQuestions = [];
 
-  // filtered domains
-  List filteredDomains = [];
-
-  // Subject List
-  List<Map<String, dynamic>> subjects = [
-    {"id": 1, "name": "Arrays"},
-    {"id": 2, "name": "Linked List"},
-    {"id": 3, "name": "Stack"},
-    {"id": 4, "name": "Queue"},
-  ];
-
-  // Latest Question List
-  List<Map<String, dynamic>> latestQuestions = [
-    {"id": 1, "question": "What is the time complexity of Binary Search?"},
-    {"id": 2, "question": "Explain the difference between TCP and UDP."},
-    {"id": 3, "question": "What is Deadlock in Operating System?"},
-    {"id": 4, "question": "What is Normalization in DBMS?"},
-  ];
+  bool isLoadingDomains = false;
+  bool isLoadingSubjects = false;
+  bool isLoadingQuestions = false;
 
   late AnimationController _controller;
 
@@ -48,15 +34,154 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
 
-    filteredDomains = domains;
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat();
+
+    fetchDashboardData();
   }
 
-//----------searchDomain function-------------
+  Future<void> fetchDashboardData() async {
+    await Future.wait([
+      fetchDomains(),
+      fetchSubjects(),
+      fetchLatestQuestions(),
+    ]);
+  }
+
+  Future<void> fetchDomains() async {
+    setState(() {
+      isLoadingDomains = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("${AppConfig.baseUrl}/domains/getDomain"),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> domainList = data["domains"] ?? [];
+
+        final List<Map<String, dynamic>> loadedDomains = domainList.map((item) {
+          return {
+            "id": item["domain_id"],
+            "name": item["domain_name"],
+          };
+        }).toList();
+
+        setState(() {
+          domains = loadedDomains;
+          filteredDomains = loadedDomains;
+        });
+      } else {
+        showSnackBar(data["message"] ?? "Failed to load domains");
+      }
+    } catch (e) {
+      showSnackBar("Error loading domains");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingDomains = false;
+        });
+      }
+    }
+  }
+
+  Future<void> fetchSubjects() async {
+    setState(() {
+      isLoadingSubjects = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("${AppConfig.baseUrl}/subjects/getSubjects"),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> subjectList = data["subjects"] ?? [];
+
+        final List<Map<String, dynamic>> loadedSubjects = subjectList.map((item) {
+          return {
+            "id": item["subject_id"],
+            "name": item["subject_name"],
+            "code": item["subject_code"],
+            "domain_id": item["domain_id"],
+            "domain_name": item["domain_name"],
+            "topics_count": item["topics_count"] ?? 0,
+          };
+        }).toList();
+
+        setState(() {
+          subjects = loadedSubjects;
+        });
+      } else {
+        showSnackBar(data["message"] ?? "Failed to load subjects");
+      }
+    } catch (e) {
+      showSnackBar("Error loading subjects");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingSubjects = false;
+        });
+      }
+    }
+  }
+
+  Future<void> fetchLatestQuestions() async {
+    setState(() {
+      isLoadingQuestions = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("${AppConfig.baseUrl}/questions/getQuestions"),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> questionList = data["questions"] ?? [];
+
+        final List<Map<String, dynamic>> loadedQuestions =
+            questionList.take(15).map((item) {
+          return {
+            "id": item["question_id"],
+            "question": item["question_string"],
+            "difficulty_level": item["difficulty_level"],
+            "type_name": item["type_name"],
+            "company_name": item["company_name"],
+            "technology": item["technology"],
+            "language": item["language"],
+            "year": item["year"],
+          };
+        }).toList();
+
+        setState(() {
+          latestQuestions = loadedQuestions;
+        });
+      } else {
+        showSnackBar(data["message"] ?? "Failed to load questions");
+      }
+    } catch (e) {
+      showSnackBar("Error loading questions");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingQuestions = false;
+        });
+      }
+    }
+  }
+
   void searchDomain(String query) {
     String search = query.toLowerCase().trim();
 
@@ -76,7 +201,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       filteredDomains = results;
     });
 
-    // Show popup if nothing found
     if (results.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -96,6 +220,17 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       );
     }
+  }
+
+  void showSnackBar(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -133,321 +268,309 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  Future<void> onRefresh() async {
+    searchController.clear();
+    await fetchDashboardData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffF4F6FA),
-
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // HEADER
-            Container(
-              width: double.infinity,
-              height: 250,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage(getGreetingImage()),
-                  fit: BoxFit.cover,
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(35),
-                  bottomRight: Radius.circular(35),
-                ),
-              ),
-              child: Container(
+      body: RefreshIndicator(
+        onRefresh: onRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // HEADER
+              Container(
+                width: double.infinity,
+                height: 250,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.45),
+                  image: DecorationImage(
+                    image: AssetImage(getGreetingImage()),
+                    fit: BoxFit.cover,
+                  ),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(35),
                     bottomRight: Radius.circular(35),
                   ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 60, 20, 25),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Hello 👋",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.45),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(35),
+                      bottomRight: Radius.circular(35),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 60, 20, 25),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "Hello 👋",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                getGreeting(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(height: 5),
+                                Text(
+                                  getGreeting(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
+                              ],
+                            ),
+                            IconButton(
+                              onPressed: onRefresh,
+                              icon: const Icon(
+                                Icons.refresh,
+                                color: Colors.white,
                               ),
-                            ],
-                          ),
-                          // const Icon(
-                          //   Icons.notifications,
-                          //   color: Colors.white,
-                          //   size: 26,
-                          // ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // SEARCH BAR
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 15),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
+                            ),
+                          ],
                         ),
-                        child: TextField(
-                          controller: searchController,
-                          onChanged: (value) {
-                            searchDomain(value);
-                          },
-                          decoration: InputDecoration(
-                            icon: const Icon(Icons.search),
-                            hintText: "Search Domain",
-                            border: InputBorder.none,
-                            suffixIcon: searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () {
-                                      searchController.clear();
-                                      searchDomain(""); // reset list
-                                      setState(() {});
-                                    },
-                                  )
-                                : null,
+                        const SizedBox(height: 30),
+
+                        // SEARCH BAR
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: TextField(
+                            controller: searchController,
+                            onChanged: (value) {
+                              searchDomain(value);
+                              setState(() {});
+                            },
+                            decoration: InputDecoration(
+                              icon: const Icon(Icons.search),
+                              hintText: "Search Domain",
+                              border: InputBorder.none,
+                              suffixIcon: searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.close),
+                                      onPressed: () {
+                                        searchController.clear();
+                                        searchDomain("");
+                                        setState(() {});
+                                      },
+                                    )
+                                  : null,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // DOMAIN TITLE
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Domain",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+              // DOMAIN TITLE
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Domain",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            // DOMAIN CARDS
-            SizedBox(
-              height: 50,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: filteredDomains.length,
-                itemBuilder: (context, index) {
-                  final domain = filteredDomains[index];
+              // DOMAIN CARDS
+              SizedBox(
+                height: 50,
+                child: isLoadingDomains
+                    ? const Center(child: CircularProgressIndicator())
+                    : filteredDomains.isEmpty
+                        ? const Center(
+                            child: Text(
+                              "No domains available",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: filteredDomains.length,
+                            itemBuilder: (context, index) {
+                              final domain = filteredDomains[index];
 
-                  return GestureDetector(
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => DomainSubjectsScreen(
+                                        domainId: domain["id"],
+                                        domainName: domain["name"],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xff6246EA),
+                                    borderRadius: BorderRadius.circular(25),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xff4F46E5)
+                                            .withOpacity(0.25),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      )
+                                    ],
+                                  ),
+                                  child: Text(
+                                    domain["name"] ?? "",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+
+              const SizedBox(height: 25),
+
+              // SUBJECT TITLE
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Subjects",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // SUBJECT CARDS
+SizedBox(
+  height: 120,
+  child: isLoadingSubjects
+      ? const Center(child: CircularProgressIndicator())
+      : subjects.isEmpty
+          ? const Center(
+              child: Text(
+                "No subjects available",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )
+          : ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: subjects.length,
+              itemBuilder: (context, index) {
+                final subject = subjects[index];
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(22),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DomainSubjectsScreen(
-                            domainId: domain["id"],
-                            domainName: domain["name"],
+                          builder: (context) => SubjectTopicsScreen(
+                            subjectId: subject["id"],
+                            subjectName: subject["name"],
                           ),
                         ),
                       );
                     },
                     child: Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      alignment: Alignment.center,
+                      width: 180,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xff6246EA),
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xff4F46E5).withOpacity(0.25),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ],
-                      ),
-                      child: Text(
-                        domain["name"],
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            // SUBJECT TITLE
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Subjects",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // SUBJECT CARDS
-            SizedBox(
-              height: 90,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: subjects.length,
-                itemBuilder: (context, index) {
-                  final subject = subjects[index];
-
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 14),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SubjectTopicsScreen(
-                              subjectId: subject["id"],
-                              subjectName: subject["name"],
-                            ),
-                          ),
-                        );
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 150,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 152, 172, 245),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: const Color.fromARGB(255, 105, 124, 245),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xff8EA2FF),
+                            Color(0xff6C7DFF),
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            subject["name"],
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Color.fromARGB(255, 250, 251, 251),
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            // LATEST QUESTION TITLE
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Latest Questions",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // QUESTION LIST
-            ListView.builder(
-              itemCount: latestQuestions.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemBuilder: (context, index) {
-                final question = latestQuestions[index];
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      // Later open question detail screen
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color.fromARGB(255, 85, 52, 249)
-                                .withOpacity(0.27),
-                            blurRadius: 13,
-                            offset: const Offset(0, 4),
-                          )
+                            color: const Color(0xff6C7DFF).withOpacity(0.25),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
                         ],
                       ),
-                      child: Row(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              question["question"],
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
+                          Container(
+                            height: 38,
+                            width: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.20),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.menu_book_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            subject["name"] ?? "",
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              height: 1.25,
                             ),
                           ),
                         ],
@@ -456,8 +579,129 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 );
               },
-            )
-          ],
+            ),
+),
+const SizedBox(height: 10),
+
+              // LATEST QUESTION TITLE
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Latest Questions",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // QUESTION LIST
+              isLoadingQuestions
+                  ? const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : latestQuestions.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Center(
+                            child: Text(
+                              "No questions available",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: latestQuestions.length,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemBuilder: (context, index) {
+                            final question = latestQuestions[index];
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  // open question detail screen later
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color.fromARGB(
+                                                255, 85, 52, 249)
+                                            .withOpacity(0.27),
+                                        blurRadius: 13,
+                                        offset: const Offset(0, 4),
+                                      )
+                                    ],
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.help_outline_rounded,
+                                        color: Color(0xff6246EA),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              question["question"] ?? "",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
+                                              children: [
+                                                if (question["difficulty_level"] !=
+                                                    null)
+                                                  buildTag(question[
+                                                      "difficulty_level"]),
+                                                if (question["type_name"] != null)
+                                                  buildTag(
+                                                      question["type_name"]),
+                                                if (question["company_name"] !=
+                                                    null)
+                                                  buildTag(question[
+                                                      "company_name"]),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
 
@@ -467,7 +711,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Container(
           height: 70,
           decoration: BoxDecoration(
-            color: Color(0xff6246EA),
+            color: const Color(0xff6246EA),
             borderRadius: BorderRadius.circular(40),
             boxShadow: [
               BoxShadow(
@@ -486,6 +730,24 @@ class _DashboardScreenState extends State<DashboardScreen>
               buildNavItem(Icons.person_rounded, "Profile", 3),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xffEEEAFE),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xff6246EA),
         ),
       ),
     );
