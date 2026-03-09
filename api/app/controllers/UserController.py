@@ -283,6 +283,25 @@ def getProfile():
         }
     }), 200
 
+@user_bp.route("/getUsers", methods=["GET"])
+def getUsers():
+    users = User.query.all()
+
+    serialized_users = [
+        {
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role.value,
+            "authprovider": u.authprovider.value,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+            "updated_at": u.updated_at.isoformat() if u.updated_at else None
+        }
+        for u in users
+    ]
+
+    return jsonify({"users": serialized_users}), 200
+
 @user_bp.route("/dashboardStats", methods=["GET"])
 def dashboardStats():
     return jsonify({

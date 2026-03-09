@@ -1,35 +1,52 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Card from "components/card";
 import { MdPerson, MdSecurity, MdEdit } from "react-icons/md";
-
-const users = [
-  {
-    id: 1,
-    name: "Preksha Arya",
-    email: "preksha@gmail.com",
-    role: "USER",
-    authprovider: "GOOGLE",
-    created_at: "2026-02-20",
-  },
-  {
-    id: 2,
-    name: "Rahul Sharma",
-    email: "rahul@gmail.com",
-    role: "CONTRIBUTOR",
-    authprovider: "EMAIL",
-    created_at: "2026-02-21",
-  },
-  {
-    id: 3,
-    name: "Admin User",
-    email: "admin@gmail.com",
-    role: "ADMIN",
-    authprovider: "EMAIL",
-    created_at: "2026-02-18",
-  },
-];
+import axios from "axios";
 
 export default function UserManagement() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("access_token");
+
+      const headers = token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {};
+
+      const res = await axios.get("http://127.0.0.1:5000/users/getUsers", {
+        headers,
+      });
+
+      setUsers(res.data?.users || []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to fetch users");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+
+    return date.toLocaleDateString("en-GB");
+  };
+
   return (
     <div className="mt-6">
       <Card className="p-6">
@@ -37,74 +54,108 @@ export default function UserManagement() {
           User Management
         </h2>
 
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         <div className="rounded-xl border bg-white shadow-sm">
-        <table className="w-full">
+          <table className="w-full">
             <thead className="bg-gray-100">
               <tr className="border-b text-left text-sm text-gray-500 dark:text-gray-400">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">User</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Auth Provider</th>
-                <th>Created At</th>
-                <th className="text-center">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Auth Provider
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Created At
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  Actions
+                </th>
               </tr>
             </thead>
 
             <tbody>
-              {users.map((user) => (
-                <tr
-                  key={user.id}
-                  className="border-b text-sm text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-navy-700"
-                >
-                  {/* User */}
-                  <td className="py-4 flex items-center gap-2 text-gray-800 dark:text-white">
-                    <MdPerson />
-                    {user.name}
-                  </td>
-
-                  {/* Email */}
-                  <td className="text-gray-800 dark:text-white">
-                    {user.email}
-                  </td>
-
-                  {/* Role */}
-                  <td>
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                      {user.role}
-                    </span>
-                  </td>
-
-                  {/* Auth Provider */}
-                  <td>
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                      {user.authprovider}
-                    </span>
-                  </td>
-
-                  {/* Created At */}
-                  <td className="text-gray-800 dark:text-white">
-                    {user.created_at}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="text-center">
-                    <div className="flex justify-center gap-3">
-                      <button
-                        title="Change Role"
-                        className="text-indigo-600 hover:text-indigo-800"
-                      >
-                        <MdSecurity size={20} />
-                      </button>
-                      <button
-                        title="Edit User"
-                        className="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
-                      >
-                        <MdEdit size={20} />
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="px-6 py-8 text-center text-sm text-gray-500"
+                  >
+                    Loading users...
                   </td>
                 </tr>
-              ))}
+              ) : users.length > 0 ? (
+                users.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="border-b text-sm text-gray-700 hover:bg-gray-50 dark:text-white dark:hover:bg-navy-700"
+                  >
+                    <td className="px-6 py-4 text-gray-800 dark:text-white">
+                      <div className="flex items-center gap-2">
+                        <MdPerson />
+                        {user.name}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 text-gray-800 dark:text-white">
+                      {user.email}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                        {user.role?.toUpperCase() || "-"}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                        {user.authprovider?.toUpperCase() || "-"}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-gray-800 dark:text-white">
+                      {formatDate(user.created_at)}
+                    </td>
+
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex justify-center gap-3">
+                        <button
+                          title="Change Role"
+                          className="text-indigo-600 hover:text-indigo-800"
+                        >
+                          <MdSecurity size={20} />
+                        </button>
+                        <button
+                          title="Edit User"
+                          className="text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
+                        >
+                          <MdEdit size={20} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="px-6 py-8 text-center text-sm text-gray-500"
+                  >
+                    No users available
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
