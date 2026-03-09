@@ -1,3 +1,3 @@
 class AppConfig{
-  static const baseUrl="https://6cf3-2402-3a80-16a3-17cd-1c8a-aadf-6c38-3095.ngrok-free.app";
+  static const baseUrl="https://5935-2409-40c1-10df-74f3-9443-e866-2820-cbd.ngrok-free.app";
 }
