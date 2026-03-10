@@ -3,6 +3,7 @@ import 'screens/guest_home.dart';
 import 'colors/colors.dart';
 import 'screens/splash_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/profile_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
       ),
       // If logged in, go to Dashboard. Otherwise, show Splash or Login.
       home: isLoggedIn ? const DashboardScreen() : const SplashScreen(),
-      // home: const DashboardScreen(),
+      // home: const ProfileScreen(),
     );
   }
 }
