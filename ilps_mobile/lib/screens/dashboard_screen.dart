@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:ilps_mobile/screens/SubjectTopicsScreen.dart';
 import 'package:ilps_mobile/screens/DomainSubjectsScreen.dart';
 import 'package:ilps_mobile/screens/login_screen.dart';
-import 'package:ilps_mobile/screens/request_main_screen..dart';
+import 'package:ilps_mobile/screens/questions_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ilps_mobile/config/app_config.dart';
 import 'package:ilps_mobile/screens/company_screen.dart';
@@ -20,6 +20,10 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   String username = "User";
+  String userRole = "user";
+  int? userId;
+  String accessToken = "";
+
   int _selectedIndex = 0;
 
   final TextEditingController searchController = TextEditingController();
@@ -32,6 +36,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool isLoadingDomains = false;
   bool isLoadingSubjects = false;
   bool isLoadingQuestions = false;
+  bool isSendingContributorRequest = false;
+  bool hasPendingContributorRequest = false;
+  bool isRefreshingProfile = false;
 
   late AnimationController _controller;
 
@@ -44,24 +51,146 @@ class _DashboardScreenState extends State<DashboardScreen>
       duration: const Duration(seconds: 4),
     )..repeat();
 
-    loadUserData();
-    fetchDashboardData();
+    initializeDashboard();
   }
 
-  Future<void> loadUserData() async {
+  Future<void> initializeDashboard() async {
+    await loadUserDataFromPrefs();
+    await refreshUserDataFromBackend();
+    await fetchDashboardData();
+  }
+
+  Future<void> loadUserDataFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final storedName =
-        prefs.getString("user_name") ??
+    final storedName = prefs.getString("user_name") ??
         prefs.getString("name") ??
         prefs.getString("username") ??
         "User";
+
+    final storedRole =
+        prefs.getString("role") ?? prefs.getString("user_role") ?? "user";
+
+    final storedToken = prefs.getString("access_token") ??
+        prefs.getString("token") ??
+        prefs.getString("accessToken") ??
+        prefs.getString("jwt") ??
+        "";
+
+    final storedUserId = prefs.getInt("user_id") ??
+        prefs.getInt("id") ??
+        (prefs.getString("user_id") != null
+            ? int.tryParse(prefs.getString("user_id")!)
+            : null) ??
+        (prefs.getString("id") != null
+            ? int.tryParse(prefs.getString("id")!)
+            : null);
 
     if (!mounted) return;
 
     setState(() {
       username = storedName.trim().isNotEmpty ? storedName.trim() : "User";
+      userRole = normalizeRole(storedRole);
+      userId = storedUserId == 0 ? null : storedUserId;
+      accessToken = storedToken.trim();
+      hasPendingContributorRequest = false;
     });
+  }
+
+  Future<void> clearInvalidSessionButKeepDashboard() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.remove("access_token");
+    await prefs.remove("token");
+    await prefs.remove("accessToken");
+    await prefs.remove("jwt");
+    await prefs.remove("role");
+    await prefs.remove("user_role");
+    await prefs.remove("user_id");
+    await prefs.remove("id");
+
+    if (!mounted) return;
+
+    setState(() {
+      accessToken = "";
+      userRole = "user";
+      userId = null;
+      hasPendingContributorRequest = false;
+
+      if (_selectedIndex >= getScreens().length) {
+        _selectedIndex = 0;
+      }
+    });
+  }
+
+  Future<void> refreshUserDataFromBackend() async {
+    if (accessToken.trim().isEmpty) {
+      debugPrint("No access token found in SharedPreferences");
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        isRefreshingProfile = true;
+      });
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse("${AppConfig.baseUrl}/users/getProfile"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${accessToken.trim()}",
+        },
+      );
+
+      debugPrint("getProfile status: ${response.statusCode}");
+      debugPrint("getProfile body: ${response.body}");
+
+      if (response.statusCode == 401) {
+        debugPrint("getProfile unauthorized - token missing/invalid/expired");
+        await clearInvalidSessionButKeepDashboard();
+        return;
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data["user"] != null) {
+        final user = data["user"];
+
+        final String freshName = (user["name"] ?? "User").toString();
+        final String freshRole =
+            (user["role"] ?? "user").toString().toLowerCase().trim();
+        final int freshUserId = user["id"] is int
+            ? user["id"]
+            : int.tryParse(user["id"].toString()) ?? 0;
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("user_name", freshName);
+        await prefs.setString("role", freshRole);
+        await prefs.setInt("user_id", freshUserId);
+
+        if (!mounted) return;
+
+        setState(() {
+          username = freshName;
+          userRole = freshRole;
+          userId = freshUserId == 0 ? null : freshUserId;
+
+          if (_selectedIndex >= getScreens().length) {
+            _selectedIndex = 0;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("refreshUserDataFromBackend error: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRefreshingProfile = false;
+        });
+      }
+    }
   }
 
   Future<void> fetchDashboardData() async {
@@ -73,9 +202,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> fetchDomains() async {
-    setState(() {
-      isLoadingDomains = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoadingDomains = true;
+      });
+    }
 
     try {
       final response = await http.get(
@@ -94,6 +225,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             "name": item["domain_name"],
           };
         }).toList();
+
+        if (!mounted) return;
 
         setState(() {
           domains = loadedDomains;
@@ -114,9 +247,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> fetchSubjects() async {
-    setState(() {
-      isLoadingSubjects = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoadingSubjects = true;
+      });
+    }
 
     try {
       final response = await http.get(
@@ -141,6 +276,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           };
         }).toList();
 
+        if (!mounted) return;
+
         setState(() {
           subjects = loadedSubjects;
         });
@@ -159,9 +296,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> fetchLatestQuestions() async {
-    setState(() {
-      isLoadingQuestions = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoadingQuestions = true;
+      });
+    }
 
     try {
       final response = await http.get(
@@ -187,6 +326,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             "year": item["year"],
           };
         }).toList();
+
+        if (!mounted) return;
 
         setState(() {
           latestQuestions = loadedQuestions;
@@ -235,6 +376,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  String normalizeRole(String? role) {
+    final value = (role ?? "").toLowerCase().trim();
+
+    if (value == "contributor") return "contributor";
+
+    // revoked, user, null, empty, or anything unknown -> user
+    return "user";
+  }
+
   void showSnackBar(String message) {
     if (!mounted) return;
 
@@ -243,6 +393,140 @@ class _DashboardScreenState extends State<DashboardScreen>
         content: Text(message),
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  Future<void> sendContributorRequest({String? remarks}) async {
+    if (userId == null) {
+      showSnackBar("User ID not found. Please login again.");
+      return;
+    }
+
+    if (userRole == "contributor") {
+      showSnackBar("You are already a contributor.");
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        isSendingContributorRequest = true;
+      });
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+          "${AppConfig.baseUrl}/contributorRequests/addContributorRequest",
+        ),
+        headers: {
+          "Content-Type": "application/json",
+          if (accessToken.trim().isNotEmpty)
+            "Authorization": "Bearer ${accessToken.trim()}",
+        },
+        body: jsonEncode({
+          "user_id": userId,
+          "remarks": remarks != null && remarks.trim().isNotEmpty
+              ? remarks.trim()
+              : null,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        if (mounted) {
+          setState(() {
+            hasPendingContributorRequest = true;
+          });
+        }
+        showSnackBar(
+            data["message"] ?? "Contributor request sent successfully");
+      } else if (response.statusCode == 409) {
+        showSnackBar(
+          data["message"] ?? "Pending contributor request already exists",
+        );
+        if (mounted) {
+          setState(() {
+            hasPendingContributorRequest = true;
+          });
+        }
+      } else if (response.statusCode == 401) {
+        showSnackBar("Session expired. Please login again.");
+      } else {
+        showSnackBar(data["message"] ?? "Failed to send contributor request");
+      }
+    } catch (e) {
+      showSnackBar("Error sending contributor request");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSendingContributorRequest = false;
+        });
+      }
+    }
+  }
+
+  void showContributorRequestDialog() {
+    if (userRole == "contributor") {
+      showSnackBar("You are already a contributor.");
+      return;
+    }
+
+    final TextEditingController remarksController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Send Contributor Request"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Add remarks (optional)",
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: remarksController,
+                maxLines: 3,
+                maxLength: 200,
+                decoration: InputDecoration(
+                  hintText: "Enter remarks...",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSendingContributorRequest
+                  ? null
+                  : () async {
+                      Navigator.pop(context);
+                      await sendContributorRequest();
+                    },
+              child: const Text("Skip"),
+            ),
+            ElevatedButton(
+              onPressed: isSendingContributorRequest
+                  ? null
+                  : () async {
+                      Navigator.pop(context);
+                      await sendContributorRequest(
+                        remarks: remarksController.text,
+                      );
+                    },
+              child: const Text("Send"),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -284,6 +568,14 @@ class _DashboardScreenState extends State<DashboardScreen>
     await prefs.remove('user_name');
     await prefs.remove('name');
     await prefs.remove('username');
+    await prefs.remove('role');
+    await prefs.remove('user_role');
+    await prefs.remove('user_id');
+    await prefs.remove('id');
+    await prefs.remove('access_token');
+    await prefs.remove('token');
+    await prefs.remove('accessToken');
+    await prefs.remove('jwt');
 
     if (!mounted) return;
 
@@ -324,20 +616,43 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> onRefresh() async {
     searchController.clear();
-    await loadUserData();
+    await loadUserDataFromPrefs();
+    await refreshUserDataFromBackend();
     await fetchDashboardData();
+
+    if (_selectedIndex >= getScreens().length) {
+      setState(() {
+        _selectedIndex = 0;
+      });
+    }
+  }
+
+  List<Widget> getScreens() {
+    final screens = <Widget>[
+      buildHomeScreen(),
+      const CompanyScreen(),
+    ];
+
+    if (userRole == "contributor") {
+      screens.add(const QuestionsList());
+    }
+
+    screens.add(const Center(child: Text("Profile Screen")));
+
+    return screens;
   }
 
   @override
   Widget build(BuildContext context) {
+    final screens = getScreens();
+
+    if (_selectedIndex >= screens.length) {
+      _selectedIndex = 0;
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xffF4F6FA),
-      body: [
-        buildHomeScreen(),
-        const CompanyScreen(),
-        const RequestMainScreen(),
-        const Center(child: Text("Profile Screen")),
-      ][_selectedIndex],
+      body: screens[_selectedIndex],
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16),
         child: Container(
@@ -351,28 +666,15 @@ class _DashboardScreenState extends State<DashboardScreen>
             children: [
               buildNavItem(Icons.home_rounded, "Home", 0),
               buildNavItem(Icons.menu_book_rounded, "Company", 1),
-              buildNavItem(Icons.request_page_rounded, "Request", 2),
-              buildNavItem(Icons.person_rounded, "Profile", 3),
+              if (userRole == "contributor")
+                buildNavItem(Icons.add_circle_outline_rounded, "Add", 2),
+              buildNavItem(
+                Icons.person_rounded,
+                "Profile",
+                userRole == "contributor" ? 3 : 2,
+              ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildTag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xffEEEAFE),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: Color(0xff6246EA),
         ),
       ),
     );
@@ -417,296 +719,465 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget buildHomeScreen() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            height: 250,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(getGreetingImage()),
-                fit: BoxFit.cover,
-              ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(35),
-                bottomRight: Radius.circular(35),
-              ),
-            ),
-            child: Container(
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              height: 285,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.45),
+                image: DecorationImage(
+                  image: AssetImage(getGreetingImage()),
+                  fit: BoxFit.cover,
+                ),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(35),
                   bottomRight: Radius.circular(35),
                 ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 60, 20, 25),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Hello 👋",
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              getGreeting(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == "logout") {
-                              showLogoutDialog();
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: "logout",
-                              child: Text("Logout"),
-                            ),
-                          ],
-                          child: CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.white,
-                            child: Text(
-                              (username.trim().isNotEmpty
-                                      ? username.trim()[0]
-                                      : "?")
-                                  .toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.blue,
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: (value) {
-                          searchDomain(value);
-                          setState(() {});
-                        },
-                        decoration: InputDecoration(
-                          icon: const Icon(Icons.search),
-                          hintText: "Search Domain",
-                          border: InputBorder.none,
-                          suffixIcon: searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.close),
-                                  onPressed: () {
-                                    searchController.clear();
-                                    searchDomain("");
-                                    setState(() {});
-                                  },
-                                )
-                              : null,
-                        ),
-                      ),
-                    ),
-                  ],
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.45),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(35),
+                    bottomRight: Radius.circular(35),
+                  ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Domain",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 50,
-            child: isLoadingDomains
-                ? const Center(child: CircularProgressIndicator())
-                : filteredDomains.isEmpty
-                    ? const Center(
-                        child: Text(
-                          "No domains available",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: filteredDomains.length,
-                        itemBuilder: (context, index) {
-                          final domain = filteredDomains[index];
-
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DomainSubjectsScreen(
-                                    domainId: domain["id"],
-                                    domainName: domain["name"],
-                                  ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 60, 20, 25),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Hello 👋",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 16,
                                 ),
-                              );
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 12),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: const Color(0xff6246EA),
-                                borderRadius: BorderRadius.circular(25),
                               ),
-                              child: Text(
-                                domain["name"],
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  Text(
+                                    getGreeting(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (isRefreshingProfile) ...[
+                                    const SizedBox(width: 10),
+                                    const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  ]
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                username,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == "logout") {
+                                showLogoutDialog();
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: "logout",
+                                child: Text("Logout"),
+                              ),
+                            ],
+                            child: CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Colors.white,
+                              child: Text(
+                                (username.trim().isNotEmpty
+                                        ? username.trim()[0]
+                                        : "?")
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
-          ),
-          const SizedBox(height: 25),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Subjects",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                      const SizedBox(height: 30),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 15),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: (value) {
+                            searchDomain(value);
+                            setState(() {});
+                          },
+                          decoration: InputDecoration(
+                            icon: const Icon(Icons.search),
+                            hintText: "Search Domain",
+                            border: InputBorder.none,
+                            suffixIcon: searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () {
+                                      searchController.clear();
+                                      searchDomain("");
+                                      setState(() {});
+                                    },
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 120,
-            child: isLoadingSubjects
-                ? const Center(child: CircularProgressIndicator())
-                : subjects.isEmpty
-                    ? const Center(
-                        child: Text(
-                          "No subjects available",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
+            const SizedBox(height: 20),
+            if (userRole == "user" && !hasPendingContributorRequest)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: isSendingContributorRequest
+                        ? null
+                        : showContributorRequestDialog,
+                    icon: isSendingContributorRequest
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded),
+                    label: Text(
+                      isSendingContributorRequest
+                          ? "Sending..."
+                          : "Send Contributor Request",
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff6246EA),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (userRole == "user" && hasPendingContributorRequest)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Card(
+                    color: Color(0xffFFF3CD),
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Text(
+                        "Your contributor request is pending approval.",
+                        style: TextStyle(
+                          color: Color(0xff8A6D3B),
+                          fontWeight: FontWeight.w600,
                         ),
-                      )
-                    : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: subjects.length,
-                        itemBuilder: (context, index) {
-                          final subject = subjects[index];
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (userRole == "user") const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Domain",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 50,
+              child: isLoadingDomains
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredDomains.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "No domains available",
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: filteredDomains.length,
+                          itemBuilder: (context, index) {
+                            final domain = filteredDomains[index];
 
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 14),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(22),
+                            return GestureDetector(
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => SubjectTopicsScreen(
-                                      subjectId: subject["id"],
-                                      subjectName: subject["name"],
+                                    builder: (context) => DomainSubjectsScreen(
+                                      domainId: domain["id"],
+                                      domainName: domain["name"],
                                     ),
                                   ),
                                 );
                               },
                               child: Container(
-                                width: 180,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 14,
-                                ),
+                                margin: const EdgeInsets.only(right: 12),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xff8EA2FF),
-                                      Color(0xff6C7DFF),
+                                  color: const Color(0xff6246EA),
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: Text(
+                                  domain["name"],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+            const SizedBox(height: 25),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Subjects",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 120,
+              child: isLoadingSubjects
+                  ? const Center(child: CircularProgressIndicator())
+                  : subjects.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "No subjects available",
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: subjects.length,
+                          itemBuilder: (context, index) {
+                            final subject = subjects[index];
+
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 14),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(22),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SubjectTopicsScreen(
+                                        subjectId: subject["id"],
+                                        subjectName: subject["name"],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  width: 180,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 14,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xff8EA2FF),
+                                        Color(0xff6C7DFF),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(22),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xff6C7DFF)
+                                            .withOpacity(0.25),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
+                                      ),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(22),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        height: 38,
+                                        width: 38,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.20),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.menu_book_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        subject["name"] ?? "",
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+            const SizedBox(height: 25),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Latest Questions",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            isLoadingQuestions
+                ? const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : latestQuestions.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(
+                          child: Text(
+                            "No questions available",
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: latestQuestions.length,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemBuilder: (context, index) {
+                          final question = latestQuestions[index];
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {},
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xff6C7DFF)
-                                          .withOpacity(0.25),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 6),
+                                      color:
+                                          const Color.fromARGB(255, 85, 52, 249)
+                                              .withOpacity(0.27),
+                                      blurRadius: 13,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                child: Row(
                                   children: [
-                                    Container(
-                                      height: 38,
-                                      width: 38,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.20),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.menu_book_rounded,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
+                                    const Icon(
+                                      Icons.help_outline_rounded,
+                                      color: Color(0xff6246EA),
                                     ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      subject["name"] ?? "",
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        height: 1.25,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        question["question"] ?? "",
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -716,94 +1187,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                           );
                         },
                       ),
-          ),
-          const SizedBox(height: 25),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Latest Questions",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          isLoadingQuestions
-              ? const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              : latestQuestions.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Center(
-                        child: Text(
-                          "No questions available",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: latestQuestions.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemBuilder: (context, index) {
-                        final question = latestQuestions[index];
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () {},
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        const Color.fromARGB(255, 85, 52, 249)
-                                            .withOpacity(0.27),
-                                    blurRadius: 13,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.help_outline_rounded,
-                                    color: Color(0xff6246EA),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      question["question"] ?? "",
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-          const SizedBox(height: 30),
-        ],
+            const SizedBox(height: 30),
+          ],
+        ),
       ),
     );
   }
