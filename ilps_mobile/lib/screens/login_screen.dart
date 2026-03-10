@@ -63,7 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance();
         final data = jsonDecode(response.body);
         await prefs.setString("user_name", data["user"]?["name"] ?? "User");
-        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString("role", data["user"]?["role"] ?? "user");
+        await prefs.setInt("user_id", data["user"]?["id"] ?? 0);
+        await prefs.setString("access_token", data["access_token"] ?? "");
+        await prefs.setBool("isLoggedIn", true);
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -112,9 +115,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
         await prefs.setString("user_name", data["user"]?["name"] ?? "User");
-
+        await prefs.setString("role", data["user"]?["role"] ?? "user");
+        await prefs.setInt("user_id", data["user"]?["id"] ?? 0);
+        await prefs.setString("access_token", data["access_token"] ?? "");
+        await prefs.setBool("isLoggedIn", true);
+      
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
