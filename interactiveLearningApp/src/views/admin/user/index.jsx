@@ -101,9 +101,9 @@ export default function UserManagement() {
                 <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Created At
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                {/* <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
                   Actions
-                </th>
+                </th> */}
               </tr>
             </thead>
 
@@ -150,7 +150,7 @@ export default function UserManagement() {
                       {formatDate(user.created_at)}
                     </td>
 
-                    <td className="px-6 py-4 text-center">
+                    {/* <td className="px-6 py-4 text-center">
                       <div className="flex justify-center gap-3">
                         <button
                           title="Change Role"
@@ -165,7 +165,7 @@ export default function UserManagement() {
                           <MdEdit size={20} />
                         </button>
                       </div>
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               ) : (

@@ -425,3 +425,76 @@ def dashboardStats():
             status=RequestStatusEnum.pending
         ).count()
     }), 200
+
+@user_bp.route("/editProfile", methods=["PUT"])
+@jwt_required()
+def editProfile():
+    identity = get_jwt_identity()
+
+    user = None
+
+    try:
+        user = User.query.filter_by(id=int(identity)).first()
+    except (ValueError, TypeError):
+        user = User.query.filter_by(email=identity).first()
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "Invalid request body"}), 400
+
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip().lower()
+    password = data.get("password", "")
+
+    if not name:
+        return jsonify({"message": "Name is required"}), 400
+
+    if not is_valid_name(name):
+        return jsonify({"message": "Name must contain only letters and spaces"}), 400
+
+    # update name
+    user.name = name
+
+    # local user can change email
+    if user.authprovider == AuthProviderEnum.local:
+        if email:
+            if not is_valid_email(email):
+                return jsonify({"message": "Invalid email format"}), 400
+
+            existing_user = User.query.filter(User.email == email, User.id != user.id).first()
+            if existing_user:
+                return jsonify({"message": "Email already in use"}), 400
+
+            user.email = email
+
+        if password:
+            if not is_strong_password(password):
+                return jsonify({
+                    "message": "Password must be at least 8 characters long and include at least one letter, one number, and one special character"
+                }), 400
+
+            user.password = generate_password_hash(password)
+
+    # google user cannot change email/password
+    else:
+        if email and email != user.email:
+            return jsonify({"message": "Google users cannot change email"}), 400
+
+        if password:
+            return jsonify({"message": "Google users cannot change password"}), 400
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Profile updated successfully",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role.value,
+            "authprovider": user.authprovider.value
+        }
+    }), 200

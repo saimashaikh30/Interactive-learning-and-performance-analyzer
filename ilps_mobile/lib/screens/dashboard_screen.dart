@@ -9,7 +9,7 @@ import 'package:ilps_mobile/screens/questions_list_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ilps_mobile/config/app_config.dart';
 import 'package:ilps_mobile/screens/company_screen.dart';
-
+import 'package:ilps_mobile/screens/profile_screen.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -638,7 +638,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       screens.add(const QuestionsList());
     }
 
-    screens.add(const Center(child: Text("Profile Screen")));
+   screens.add(const ProfileScreen());
 
     return screens;
   }
