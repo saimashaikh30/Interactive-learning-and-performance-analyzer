@@ -401,7 +401,7 @@ const AddQuestion = () => {
                   />
 
                   {topicSuggestions.length > 0 && (
-                    <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-gray-300 bg-white text-sm shadow">
+                    <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto text-gray-900 rounded-lg border border-gray-300 bg-white text-sm shadow">
                       {topicSuggestions.map((t) => (
                         <li
                           key={t.topic_id}
@@ -452,7 +452,7 @@ const AddQuestion = () => {
                       placeholder={`Option ${i + 1}`}
                       className="h-10 flex-1 rounded-lg border px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <label className="flex items-center gap-1 text-sm">
+                    <label className="flex items-center gap-1 text-sm text-gray-900">
                       <input
                         type="radio"
                         name="correctOption"
