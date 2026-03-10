@@ -14,6 +14,7 @@ import UserDashboard from "views/user/UserDashboard";
 import UserDomains from "views/user/UserDomains";
 import UserSubjects from "views/user/UserSubjects";
 import UserTopics from "views/user/UserTopics";
+import ContributorRequest from "views/user/ContributorRequest";
 
 import RequireAuth from "./middleware/RequireAuth";
 
@@ -23,9 +24,10 @@ const App = () => {
 
       {/* Public */}
       <Route path="/" element={<GuestHome />} />
+
       {/* AUTH ROUTES */}
       <Route path="auth" element={<AuthLayout />}>
-        <Route index element={<Navigate to="login" replace />} />
+        <Route index element={<Navigate to="sign-in" replace />} />
         <Route path="sign-in" element={<Login />} />
         <Route path="sign-up" element={<Register />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
@@ -37,12 +39,18 @@ const App = () => {
       </Route>
 
       {/* User Middleware */}
-      <Route element={<RequireAuth allowedRoles={["user"]} />}>
+      <Route element={<RequireAuth allowedRoles={["user", "contributor"]} />}>
         <Route path="user" element={<UserLayout />}>
+          {/* Default dashboard */}
           <Route index element={<UserDashboard />} />
-          <Route path="domains"index element={<UserDomains />} />
-          <Route path="subjects"index element={<UserSubjects />} />
-          <Route path="topics"index element={<UserTopics />} />
+
+          {/* User pages */}
+          <Route path="domains" element={<UserDomains />} />
+          <Route path="subjects" element={<UserSubjects />} />
+          <Route path="topics" element={<UserTopics />} />
+
+          {/* Contributor Requests */}
+          <Route path="contributor-requests" element={<ContributorRequest />} />
         </Route>
       </Route>
 

@@ -1,24 +1,22 @@
-import { Outlet } from "react-router-dom";
-import UserSidebar from "views/user/components/UserSidebar";
+import { Outlet, NavLink } from "react-router-dom";
 import UserNavbar from "views/user/components/UserNavbar";
 import Footer from "views/user/components/Footer";
 
 export default function UserLayout() {
+  const userRole = localStorage.getItem("role"); // assuming you store role like "user" or "contributor"
+
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      
+      {/* Navbar */}
+      <UserNavbar />
 
-      <UserSidebar />
+      {/* Main content */}
+      <main className="flex-1 p-8">
+        <Outlet />
+      </main>
 
-      <div className="flex flex-col flex-1">
-        <UserNavbar />
-
-        <main className="flex-1 p-8">
-          <Outlet />
-        </main>
-
-        <Footer />
-      </div>
-
+      <Footer />
     </div>
   );
 }

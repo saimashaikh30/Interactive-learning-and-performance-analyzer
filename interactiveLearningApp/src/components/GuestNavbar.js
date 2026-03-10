@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import "../styles/guest.css";
-import logo from "../assets/img/landing/logo.png";
+import logo from "../assets/img/landing/ilps3.png";
 
 function GuestNavbar() {
   return (
