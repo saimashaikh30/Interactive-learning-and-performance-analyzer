@@ -2,7 +2,10 @@ import React from "react";
 
 const ConfirmModal = ({ open, onClose, onConfirm, title, description }) => {
   if (!open) return null;
-
+const currentUserId = parseInt(
+  localStorage.getItem("user_id") || localStorage.getItem("userId"),
+  10
+);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">

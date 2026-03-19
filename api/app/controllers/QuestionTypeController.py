@@ -20,7 +20,7 @@ def serialize_question_type(qt):
     }
 
 
-# ================= CREATE =================
+
 
 @question_type_bp.route("/addQuestionType", methods=["POST"])
 def addQuestionType():
@@ -73,7 +73,6 @@ def addQuestionType():
         return jsonify({"message": "Failed to add question type"}), 500
 
 
-# ================= READ ALL =================
 
 @question_type_bp.route("/getQuestionTypes", methods=["GET"])
 def getQuestionTypes():
@@ -84,7 +83,6 @@ def getQuestionTypes():
     }), 200
 
 
-# ================= READ SINGLE =================
 
 @question_type_bp.route("/getQuestionType/<int:type_id>", methods=["GET"])
 def getQuestionType(type_id):
@@ -98,7 +96,6 @@ def getQuestionType(type_id):
     }), 200
 
 
-# ================= UPDATE =================
 
 @question_type_bp.route("/editQuestionType", methods=["PUT"])
 def editQuestionType():
@@ -160,7 +157,6 @@ def editQuestionType():
         return jsonify({"message": "Failed to update question type"}), 500
 
 
-# ================= DELETE =================
 
 @question_type_bp.route("/deleteQuestionType/<int:type_id>", methods=["DELETE"])
 def deleteQuestionType(type_id):

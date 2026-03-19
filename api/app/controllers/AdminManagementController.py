@@ -15,30 +15,29 @@ def serialize_user(user):
         "role": user.role.value
     }
 
-# Get all users (exclude superadmin)
+
 @admin_bp.route("/users", methods=["GET"])
 @jwt_required()
-@cross_origin()  # allow CORS for GET
+@cross_origin() 
 def get_users():
     current_user_id = get_jwt_identity()
     users = User.query.filter(User.role != UserRoleEnum.superadmin).all()
     users = [u for u in users if u.id != current_user_id]
     return jsonify({"users": [serialize_user(u) for u in users]}), 200
 
-# Change a user's role
+
 @admin_bp.route("/users/<int:user_id>/role", methods=["PUT"])
 @jwt_required()
-@cross_origin()  # allow CORS for PUT (preflight OPTIONS handled)
+@cross_origin()  
 def change_role(user_id):
     current_user_id = get_jwt_identity()
     data = request.get_json()
     new_role = data.get("role")
 
-    # Validate role
+   
     if not new_role or new_role not in [r.value for r in UserRoleEnum if r != UserRoleEnum.superadmin]:
         return jsonify({"message": "Invalid role"}), 400
 
-    # Cannot change your own role
     if user_id == current_user_id:
         return jsonify({"message": "Cannot change your own role"}), 403
 

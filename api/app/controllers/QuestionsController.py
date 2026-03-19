@@ -151,7 +151,6 @@ def validate_options(options):
     return cleaned_options, None
 
 
-# ================= ADD QUESTION =================
 
 @questions_bp.route("/addQuestion", methods=["POST"])
 def addQuestion():
@@ -274,8 +273,6 @@ def addQuestion():
         return jsonify({"message": "Failed to add question"}), 500
 
 
-# ================= EDIT QUESTION =================
-
 @questions_bp.route("/editQuestion", methods=["PUT"])
 def editQuestion():
     data = request.get_json()
@@ -390,7 +387,6 @@ def editQuestion():
         return jsonify({"message": "Failed to update question"}), 500
 
 
-# ================= DELETE QUESTION =================
 
 @questions_bp.route("/deleteQuestion/<int:question_id>", methods=["DELETE"])
 def deleteQuestion(question_id):
@@ -410,7 +406,7 @@ def deleteQuestion(question_id):
         return jsonify({"message": "Failed to delete question"}), 500
 
 
-# ================= GET ALL QUESTIONS =================
+
 
 @questions_bp.route("/getQuestions", methods=["GET"])
 def getQuestions():
@@ -421,7 +417,7 @@ def getQuestions():
     }), 200
 
 
-# ================= GET SINGLE QUESTION =================
+
 
 @questions_bp.route("/getQuestion/<int:question_id>", methods=["GET"])
 def getQuestion(question_id):
@@ -435,7 +431,7 @@ def getQuestion(question_id):
     }), 200
 
 
-# ================= FILTER BY TOPIC =================
+
 
 @questions_bp.route("/getQuestionsByTopic/<int:topic_id>", methods=["GET"])
 def getQuestionsByTopic(topic_id):
@@ -453,7 +449,7 @@ def getQuestionsByTopic(topic_id):
     }), 200
 
 
-# ================= FILTER BY QUESTION TYPE =================
+
 
 @questions_bp.route("/getQuestionsByType/<int:type_id>", methods=["GET"])
 def getQuestionsByType(type_id):
@@ -471,8 +467,6 @@ def getQuestionsByType(type_id):
     }), 200
 
 
-# ================= FILTER BY DIFFICULTY =================
-
 @questions_bp.route("/getQuestionsByDifficulty/<string:difficulty_level>", methods=["GET"])
 def getQuestionsByDifficulty(difficulty_level):
     if difficulty_level not in [d.value for d in DifficultyLevelEnum]:
@@ -488,7 +482,6 @@ def getQuestionsByDifficulty(difficulty_level):
     }), 200
 
 
-# ================= FILTER BY COMPANY =================
 
 @questions_bp.route("/getQuestionsByCompany/<int:company_id>", methods=["GET"])
 def getQuestionsByCompany(company_id):
@@ -506,7 +499,6 @@ def getQuestionsByCompany(company_id):
     }), 200
 
 
-# ================= FILTER BY CREATOR =================
 
 @questions_bp.route("/getQuestionsByCreator/<int:user_id>", methods=["GET"])
 def getQuestionsByCreator(user_id):
@@ -524,7 +516,7 @@ def getQuestionsByCreator(user_id):
     }), 200
 
 
-# ================= MIXED FILTER =================
+
 
 @questions_bp.route("/filterQuestions", methods=["POST"])
 def filterQuestions():

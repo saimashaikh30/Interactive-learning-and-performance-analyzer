@@ -9,7 +9,7 @@ contributor_request_bp = Blueprint("contributor_request_bp", __name__)
 MAX_REMARKS_LENGTH = 200
 
 
-# ================= HELPER =================
+
 
 def normalize_text(value: str) -> str:
     return " ".join(value.strip().split())
@@ -45,7 +45,6 @@ def serialize_contributor_request(req):
     }
 
 
-# ================= CREATE =================
 
 @contributor_request_bp.route("/addContributorRequest", methods=["POST"])
 def addContributorRequest():
@@ -100,7 +99,7 @@ def addContributorRequest():
         return jsonify({"message": "Failed to create contributor request"}), 500
 
 
-# ================= GET ALL =================
+
 
 @contributor_request_bp.route("/getContributorRequests", methods=["GET"])
 def getContributorRequests():
@@ -113,7 +112,7 @@ def getContributorRequests():
     }), 200
 
 
-# ================= GET SINGLE =================
+
 
 @contributor_request_bp.route("/getContributorRequest/<int:request_id>", methods=["GET"])
 def getContributorRequest(request_id):
@@ -127,7 +126,7 @@ def getContributorRequest(request_id):
     }), 200
 
 
-# ================= UPDATE REMARKS =================
+
 
 @contributor_request_bp.route("/editContributorRequest", methods=["PUT"])
 def editContributorRequest():
@@ -165,7 +164,7 @@ def editContributorRequest():
         return jsonify({"message": "Failed to update contributor request"}), 500
 
 
-# ================= DELETE =================
+
 
 @contributor_request_bp.route("/deleteContributorRequest/<int:request_id>", methods=["DELETE"])
 def deleteContributorRequest(request_id):
@@ -185,7 +184,7 @@ def deleteContributorRequest(request_id):
         return jsonify({"message": "Failed to delete contributor request"}), 500
 
 
-# ================= GET BY STATUS =================
+
 
 @contributor_request_bp.route("/getContributorRequestsByStatus/<string:status>", methods=["GET"])
 def getContributorRequestsByStatus(status):
@@ -202,7 +201,7 @@ def getContributorRequestsByStatus(status):
     }), 200
 
 
-# ================= APPROVE =================
+
 
 @contributor_request_bp.route("/approveContributorRequest", methods=["PUT"])
 def approveContributorRequest():
@@ -260,7 +259,7 @@ def approveContributorRequest():
         return jsonify({"message": "Failed to approve contributor request"}), 500
     
 
-# ================= REJECT =================
+
 
 @contributor_request_bp.route("/rejectContributorRequest", methods=["PUT"])
 def rejectContributorRequest():
@@ -312,7 +311,7 @@ def rejectContributorRequest():
         return jsonify({"message": "Failed to reject contributor request"}), 500
     
     
-# ================= REVOKE =================
+
 
 @contributor_request_bp.route("/revokeContributorRequest", methods=["PUT"])
 def revokeContributorRequest():

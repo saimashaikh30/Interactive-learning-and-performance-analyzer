@@ -20,7 +20,7 @@ def serialize_company(company):
     }
 
 
-# ================= ADD COMPANY =================
+
 
 @companies_bp.route("/addCompany", methods=["POST"])
 def addCompany():
@@ -73,7 +73,7 @@ def addCompany():
         return jsonify({"message": "Failed to add company"}), 500
 
 
-# ================= EDIT COMPANY =================
+
 
 @companies_bp.route("/editCompany", methods=["PUT"])
 def editCompany():
@@ -131,7 +131,7 @@ def editCompany():
         return jsonify({"message": "Failed to update company"}), 500
 
 
-# ================= DELETE COMPANY =================
+
 
 @companies_bp.route("/deleteCompany/<int:company_id>", methods=["DELETE"])
 def deleteCompany(company_id):
@@ -159,7 +159,7 @@ def deleteCompany(company_id):
         return jsonify({"message": "Failed to delete company"}), 500
 
 
-# ================= GET ALL COMPANIES =================
+
 
 @companies_bp.route("/getCompanies", methods=["GET"])
 def getCompanies():
@@ -171,7 +171,6 @@ def getCompanies():
     }), 200
 
 
-# ================= GET SINGLE COMPANY =================
 
 @companies_bp.route("/getCompany/<int:company_id>", methods=["GET"])
 def getCompany(company_id):

@@ -11,7 +11,7 @@ import threading
 
 user_bp = Blueprint("user_bp", __name__)
 
-# ================= HELPERS =================
+
 def generate_otp():
     return secrets.randbelow(900000) + 100000
 
@@ -27,10 +27,9 @@ def is_strong_password(password):
         password
     ))
 
-# ================= ASYNC EMAIL =================
 def sendEmail(subject, to, body):
     """Send email in a background thread."""
-    app = current_app._get_current_object()  # get actual Flask app instance
+    app = current_app._get_current_object() 
 
     def send():
         with app.app_context():
@@ -44,7 +43,7 @@ def sendEmail(subject, to, body):
 
     threading.Thread(target=send).start()
 
-# ================= REGISTER =================
+
 @user_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -163,7 +162,7 @@ def register():
         return jsonify({"message": "Invalid auth provider"}), 400
 
 
-# ================= LOGIN =================
+
 @user_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
@@ -240,7 +239,8 @@ def login():
             "authprovider": user.authprovider.value
         }
     }), 200
-# ================= SEND OTP =================
+
+
 @user_bp.route("/sendOtp", methods=["POST"])
 def sendOtp():
     data = request.get_json()
@@ -283,7 +283,8 @@ def verifyOtp():
     current_app.redis_client.delete(f"otp:{email}")
     return jsonify({"message": "OTP verified"}), 200
 
-# ================= CHANGE PASSWORD =================
+
+
 @user_bp.route("/changePassword", methods=["PUT"])
 def changePassword():
     data = request.get_json()
@@ -307,69 +308,7 @@ def changePassword():
 
     return jsonify({"message": "Password changed successfully"}), 200
 
-# ================= LOGIN =================
-# @user_bp.route("/login", methods=["POST"])
-# def login():
-#     data = request.get_json()
-#     if not data:
-#         return jsonify({"message": "Invalid request body"}), 400
 
-#     provider = data.get("authprovider")
-#     if not provider:
-#         return jsonify({"message": "Auth provider required"}), 400
-
-#     if provider == "local":
-#         email = data.get("email", "").strip().lower()
-#         password = data.get("password", "")
-
-#         if not email or not password:
-#             return jsonify({"message": "Email and password required"}), 400
-#         if not is_valid_email(email):
-#             return jsonify({"message": "Invalid email format"}), 400
-
-#         user = User.query.filter_by(email=email).first()
-#         if not user:
-#             return jsonify({"message": "User not found"}), 404
-#         if user.authprovider != AuthProviderEnum.local:
-#             return jsonify({"message": "Use Google login"}), 400
-#         if not check_password_hash(user.password, password):
-#             return jsonify({"message": "Invalid credentials"}), 401
-
-#     elif provider == "google":
-#         token = data.get("access_token")
-#         if not token:
-#             return jsonify({"message": "Missing Google token"}), 400
-
-#         resp = requests.get(
-#             "https://www.googleapis.com/oauth2/v3/userinfo",
-#             headers={"Authorization": f"Bearer {token}"}
-#         )
-#         if resp.status_code != 200:
-#             return jsonify({"message": "Invalid Google token"}), 401
-
-#         idinfo = resp.json()
-#         email = idinfo.get("email")
-#         name = idinfo.get("name", "")
-
-#         user = User.query.filter_by(email=email).first()
-#         if not user:
-#             user = User(name=name, email=email, password=None, authprovider=AuthProviderEnum.google, role=UserRoleEnum.user)
-#             db.session.add(user)
-#             db.session.commit()
-
-#     else:
-#         return jsonify({"message": "Invalid auth provider"}), 400
-
-#     access_token = create_access_token(identity=str(user.id))
-
-#     # Send login email asynchronously
-#     subject = "Login Notification"
-#     body = f"Hello {user.name},\n\nYou just logged into ILPS successfully!"
-#     sendEmail(subject, user.email, body)
-
-#     return jsonify({"message": "Login successful", "access_token": access_token, "role": user.role.value}), 200
-
-# ================= PROFILE =================
 @user_bp.route("/getProfile", methods=["GET"])
 @jwt_required()
 def getProfile():
@@ -397,7 +336,7 @@ def getProfile():
 
 @user_bp.route("/getUsers", methods=["GET"])
 def getUsers():
-    users = User.query.all()
+    users = User.query.filter(User.role != UserRoleEnum.superadmin).all()
 
     serialized_users = [
         {
@@ -455,10 +394,10 @@ def editProfile():
     if not is_valid_name(name):
         return jsonify({"message": "Name must contain only letters and spaces"}), 400
 
-    # update name
+
     user.name = name
 
-    # local user can change email
+    
     if user.authprovider == AuthProviderEnum.local:
         if email:
             if not is_valid_email(email):
@@ -498,3 +437,41 @@ def editProfile():
             "authprovider": user.authprovider.value
         }
     }), 200
+
+@user_bp.route("/changeRole/<int:user_id>", methods=["PUT"])
+def changeRole(user_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "Invalid request body"}), 400
+
+    role_str = data.get("role")
+    if not role_str:
+        return jsonify({"message": "Role is required"}), 400
+
+    if role_str not in [r.value for r in UserRoleEnum]:
+        return jsonify({
+            "message": f"Invalid role. Must be one of {[r.value for r in UserRoleEnum]}"
+        }), 400
+
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    try:
+        user.role = UserRoleEnum(role_str)
+        db.session.commit()
+
+        return jsonify({
+            "message": "User role updated successfully",
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "role": user.role.value,
+                "authprovider": user.authprovider.value
+            }
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+        return jsonify({"message": "Failed to update user role"}), 500
