@@ -10,8 +10,17 @@ from app.models import (
     QuestionType,
     User,
     DifficultyLevelEnum,
-    Subject
+    Subject,
+    QuestionOccurrence
 )
+from app.services.question_ai_service import (
+    grammar_check_question,
+    find_exact_duplicate,
+    find_semantic_duplicate,
+    validate_question_subject_topic_alignment
+)
+
+from datetime import datetime
 
 questions_bp = Blueprint("questions_bp", __name__)
 
@@ -25,33 +34,61 @@ def normalize_text(value: str) -> str:
     return " ".join(value.strip().split())
 
 
+def serialize_occurrence(occ):
+    return {
+        "occurrence_id": occ.occurrence_id,
+        "company_id": occ.company_id,
+        "company_name": occ.company.company_name if occ.company else None,
+        "year": occ.year,
+        "language": occ.language,
+        "technology": occ.technology,
+        "difficulty_level": occ.difficulty_level.value if occ.difficulty_level else None,
+        "created_by": occ.created_by,
+        "creator_name": occ.creator.name if occ.creator else None,
+        "created_at": occ.created_at.isoformat() if occ.created_at else None
+    }
+
+
 def serialize_question(q):
-    company_name = q.company.company_name if hasattr(q, "company") and q.company else None
-    type_name = q.question_type.type_name if hasattr(q, "question_type") and q.question_type else None
+    type_name = q.question_type.type_name if q.question_type else None
+    occurrences = q.occurrences or []
 
-    if type_name is None and q.type_id:
-        qtype = QuestionType.query.filter_by(type_id=q.type_id).first()
-        type_name = qtype.type_name if qtype else None
+    company_ids = sorted({occ.company_id for occ in occurrences if occ.company_id is not None})
+    company_names = sorted({occ.company.company_name for occ in occurrences if occ.company})
 
-    if company_name is None and q.company_id:
-        company = Company.query.filter_by(company_id=q.company_id).first()
-        company_name = company.company_name if company else None
+    difficulty_levels = sorted({
+        occ.difficulty_level.value for occ in occurrences if occ.difficulty_level
+    })
+
+    years = sorted({occ.year for occ in occurrences if occ.year})
+    languages = sorted({occ.language for occ in occurrences if occ.language})
+    technologies = sorted({occ.technology for occ in occurrences if occ.technology})
+
+    fallback_dt = datetime.min
+
+    latest_occurrence = max(
+        occurrences,
+        key=lambda x: x.created_at if x.created_at is not None else fallback_dt,
+        default=None
+    )
 
     return {
         "question_id": q.question_id,
         "question_string": q.question_string,
-        "difficulty_level": q.difficulty_level.value if q.difficulty_level else None,
-        "year": q.year,
-        "technology": q.technology,
-        "language": q.language,
-        "company_id": q.company_id,
-        "company_name": company_name,
         "type_id": q.type_id,
         "type_name": type_name,
         "created_by": q.created_by,
         "creator_name": q.creator.name if q.creator else None,
         "created_at": q.created_at.isoformat() if q.created_at else None,
         "updated_at": q.updated_at.isoformat() if q.updated_at else None,
+        "appearance_count": len(occurrences),
+        "company_ids": company_ids,
+        "company_names": company_names,
+        "difficulty_levels": difficulty_levels,
+        "years": years,
+        "languages": languages,
+        "technologies": technologies,
+        "latest_occurrence": serialize_occurrence(latest_occurrence) if latest_occurrence else None,
         "topics": [
             {
                 "topic_id": t.topic_id,
@@ -68,7 +105,8 @@ def serialize_question(q):
                 "is_correct": o.is_correct
             }
             for o in q.options
-        ]
+        ],
+        "occurrences": [serialize_occurrence(occ) for occ in occurrences]
     }
 
 
@@ -151,6 +189,16 @@ def validate_options(options):
     return cleaned_options, None
 
 
+def get_existing_occurrence(question_id, company_id, year, language, technology, difficulty_level):
+    return QuestionOccurrence.query.filter_by(
+        question_id=question_id,
+        company_id=company_id,
+        year=year,
+        language=language,
+        technology=technology,
+        difficulty_level=difficulty_level
+    ).first()
+
 
 @questions_bp.route("/addQuestion", methods=["POST"])
 def addQuestion():
@@ -198,6 +246,8 @@ def addQuestion():
     if difficulty_level not in [d.value for d in DifficultyLevelEnum]:
         return jsonify({"message": "Invalid difficulty_level"}), 400
 
+    difficulty_enum = DifficultyLevelEnum(difficulty_level)
+
     if type_id is None or created_by is None:
         return jsonify({
             "message": "type_id, created_by and topic_ids are required"
@@ -227,14 +277,157 @@ def addQuestion():
     if len(topics) != len(set(topic_ids)):
         return jsonify({"message": "One or more topic IDs are invalid"}), 404
 
+    grammar_result = grammar_check_question(question_string)
+    if not grammar_result["ok"]:
+        return jsonify({
+            "message": "Grammar issue detected. Question not added.",
+            "can_add": False,
+            "issues": grammar_result["issues"],
+            "suggested_question": grammar_result["suggested_text"]
+        }), 400
+
+    subject_names = list({t.subject.subject_name for t in topics if t.subject})
+    topic_names = [t.topic_name for t in topics]
+
+    alignment_result = validate_question_subject_topic_alignment(
+        question_text=question_string,
+        subject_name=subject_names[0] if subject_names else "",
+        topic_names=topic_names
+    )
+
+    if not alignment_result["ok"]:
+        return jsonify({
+            "message": "Question does not match selected subject/topic.",
+            "can_add": False,
+            "alignment_issue": True,
+            "alignment_score": alignment_result["score"],
+            "matched_topic": alignment_result["matched_topic"],
+            "details": alignment_result["message"]
+        }), 400
+
+    existing_questions = Question.query.all()
+
+    exact_match = find_exact_duplicate(question_string, existing_questions)
+    if exact_match:
+        try:
+            existing_topic_ids = {
+                row.topic_id for row in Topic_Questions.query.filter_by(
+                    question_id=exact_match.question_id
+                ).all()
+            }
+
+            for topic_id in set(topic_ids):
+                if topic_id not in existing_topic_ids:
+                    db.session.add(Topic_Questions(
+                        topic_id=topic_id,
+                        question_id=exact_match.question_id
+                    ))
+
+            existing_occurrence = get_existing_occurrence(
+                exact_match.question_id,
+                company_id,
+                year,
+                language,
+                technology,
+                difficulty_enum
+            )
+
+            if not existing_occurrence:
+                db.session.add(QuestionOccurrence(
+                    question_id=exact_match.question_id,
+                    company_id=company_id,
+                    year=year,
+                    language=language,
+                    technology=technology,
+                    difficulty_level=difficulty_enum,
+                    created_by=created_by
+                ))
+
+            db.session.commit()
+
+            updated_question = Question.query.filter_by(
+                question_id=exact_match.question_id
+            ).first()
+
+            return jsonify({
+                "message": "Exact duplicate found. Existing question reused and occurrence recorded.",
+                "action": "duplicate_merged",
+                "matched_question": serialize_question(updated_question)
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("Duplicate merge error:", str(e))
+            return jsonify({
+                "message": "Failed to merge duplicate question",
+                "error": str(e)
+            }), 500
+
+    semantic_match, similarity_score = find_semantic_duplicate(
+        question_string,
+        existing_questions,
+        threshold=0.85
+    )
+
+    if semantic_match:
+        try:
+            existing_topic_ids = {
+                row.topic_id for row in Topic_Questions.query.filter_by(
+                    question_id=semantic_match.question_id
+                ).all()
+            }
+
+            for topic_id in set(topic_ids):
+                if topic_id not in existing_topic_ids:
+                    db.session.add(Topic_Questions(
+                        topic_id=topic_id,
+                        question_id=semantic_match.question_id
+                    ))
+
+            existing_occurrence = get_existing_occurrence(
+                semantic_match.question_id,
+                company_id,
+                year,
+                language,
+                technology,
+                difficulty_enum
+            )
+
+            if not existing_occurrence:
+                db.session.add(QuestionOccurrence(
+                    question_id=semantic_match.question_id,
+                    company_id=company_id,
+                    year=year,
+                    language=language,
+                    technology=technology,
+                    difficulty_level=difficulty_enum,
+                    created_by=created_by
+                ))
+
+            db.session.commit()
+
+            updated_question = Question.query.filter_by(
+                question_id=semantic_match.question_id
+            ).first()
+
+            return jsonify({
+                "message": "Similar question already exists. Existing question reused and occurrence recorded.",
+                "action": "semantic_duplicate_merged",
+                "similarity_score": round(similarity_score, 4),
+                "matched_question": serialize_question(updated_question)
+            }), 200
+
+        except Exception as e:
+            db.session.rollback()
+            print("Semantic duplicate merge error:", str(e))
+            return jsonify({
+                "message": "Failed to merge similar question",
+                "error": str(e)
+            }), 500
+
     try:
         question = Question(
             question_string=question_string,
-            difficulty_level=DifficultyLevelEnum(difficulty_level),
-            year=year,
-            technology=technology,
-            language=language,
-            company_id=company_id,
             type_id=type_id,
             created_by=created_by
         )
@@ -255,22 +448,41 @@ def addQuestion():
                 is_correct=opt["is_correct"]
             ))
 
+        db.session.add(QuestionOccurrence(
+            question_id=question.question_id,
+            company_id=company_id,
+            year=year,
+            language=language,
+            technology=technology,
+            difficulty_level=difficulty_enum,
+            created_by=created_by
+        ))
+
         db.session.commit()
 
         question = Question.query.filter_by(question_id=question.question_id).first()
 
         return jsonify({
             "message": "Question added successfully",
+            "action": "new_question_added",
             "question": serialize_question(question)
         }), 201
 
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to add question"}), 409
+        print("IntegrityError in addQuestion:", str(e))
+        return jsonify({
+            "message": "Failed to add question",
+            "error": str(e.orig)
+        }), 409
 
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to add question"}), 500
+        print("Error in addQuestion:", str(e))
+        return jsonify({
+            "message": "Failed to add question",
+            "error": str(e)
+        }), 500
 
 
 @questions_bp.route("/editQuestion", methods=["PUT"])
@@ -322,6 +534,8 @@ def editQuestion():
     if difficulty_level not in [d.value for d in DifficultyLevelEnum]:
         return jsonify({"message": "Invalid difficulty_level"}), 400
 
+    difficulty_enum = DifficultyLevelEnum(difficulty_level)
+
     if type_id is None:
         return jsonify({"message": "type_id is required"}), 400
 
@@ -349,13 +563,36 @@ def editQuestion():
     if len(topics) != len(set(topic_ids)):
         return jsonify({"message": "One or more topic IDs are invalid"}), 404
 
+    grammar_result = grammar_check_question(question_string)
+    if not grammar_result["ok"]:
+        return jsonify({
+            "message": "Grammar issue detected. Question not updated.",
+            "can_add": False,
+            "issues": grammar_result["issues"],
+            "suggested_question": grammar_result["suggested_text"]
+        }), 400
+
+    subject_names = list({t.subject.subject_name for t in topics if t.subject})
+    topic_names = [t.topic_name for t in topics]
+
+    alignment_result = validate_question_subject_topic_alignment(
+        question_text=question_string,
+        subject_name=subject_names[0] if subject_names else "",
+        topic_names=topic_names
+    )
+
+    if not alignment_result["ok"]:
+        return jsonify({
+            "message": "Question does not match selected subject/topic.",
+            "can_add": False,
+            "alignment_issue": True,
+            "alignment_score": alignment_result["score"],
+            "matched_topic": alignment_result["matched_topic"],
+            "details": alignment_result["message"]
+        }), 400
+
     try:
         question.question_string = question_string
-        question.difficulty_level = DifficultyLevelEnum(difficulty_level)
-        question.year = year
-        question.technology = technology
-        question.language = language
-        question.company_id = company_id
         question.type_id = type_id
 
         Topic_Questions.query.filter_by(question_id=question_id).delete()
@@ -373,6 +610,27 @@ def editQuestion():
                 is_correct=opt["is_correct"]
             ))
 
+        latest_occurrence = QuestionOccurrence.query.filter_by(
+            question_id=question_id
+        ).order_by(QuestionOccurrence.created_at.desc()).first()
+
+        if latest_occurrence:
+            latest_occurrence.company_id = company_id
+            latest_occurrence.year = year
+            latest_occurrence.language = language
+            latest_occurrence.technology = technology
+            latest_occurrence.difficulty_level = difficulty_enum
+        else:
+            db.session.add(QuestionOccurrence(
+                question_id=question_id,
+                company_id=company_id,
+                year=year,
+                language=language,
+                technology=technology,
+                difficulty_level=difficulty_enum,
+                created_by=question.created_by
+            ))
+
         db.session.commit()
 
         updated_question = Question.query.filter_by(question_id=question_id).first()
@@ -382,10 +640,21 @@ def editQuestion():
             "question": serialize_question(updated_question)
         }), 200
 
-    except Exception:
+    except IntegrityError as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to update question"}), 500
+        print("IntegrityError in editQuestion:", str(e))
+        return jsonify({
+            "message": "Failed to update question",
+            "error": str(e.orig)
+        }), 409
 
+    except Exception as e:
+        db.session.rollback()
+        print("Error in editQuestion:", str(e))
+        return jsonify({
+            "message": "Failed to update question",
+            "error": str(e)
+        }), 500
 
 
 @questions_bp.route("/deleteQuestion/<int:question_id>", methods=["DELETE"])
@@ -396,16 +665,22 @@ def deleteQuestion(question_id):
         return jsonify({"message": "Question not found"}), 404
 
     try:
+        Topic_Questions.query.filter_by(question_id=question_id).delete()
+        QuestionOccurrence.query.filter_by(question_id=question_id).delete()
+        Option.query.filter_by(question_id=question_id).delete()
+
         db.session.delete(question)
         db.session.commit()
 
         return jsonify({"message": "Question deleted successfully"}), 200
 
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        return jsonify({"message": "Failed to delete question"}), 500
-
-
+        print("Error in deleteQuestion:", str(e))
+        return jsonify({
+            "message": "Failed to delete question",
+            "error": str(e)
+        }), 500
 
 
 @questions_bp.route("/getQuestions", methods=["GET"])
@@ -415,8 +690,6 @@ def getQuestions():
     return jsonify({
         "questions": [serialize_question(q) for q in questions]
     }), 200
-
-
 
 
 @questions_bp.route("/getQuestion/<int:question_id>", methods=["GET"])
@@ -429,8 +702,6 @@ def getQuestion(question_id):
     return jsonify({
         "question": serialize_question(question)
     }), 200
-
-
 
 
 @questions_bp.route("/getQuestionsByTopic/<int:topic_id>", methods=["GET"])
@@ -447,8 +718,6 @@ def getQuestionsByTopic(topic_id):
         "topic_name": topic.topic_name,
         "questions": [serialize_question(q) for q in questions]
     }), 200
-
-
 
 
 @questions_bp.route("/getQuestionsByType/<int:type_id>", methods=["GET"])
@@ -472,15 +741,19 @@ def getQuestionsByDifficulty(difficulty_level):
     if difficulty_level not in [d.value for d in DifficultyLevelEnum]:
         return jsonify({"message": "Invalid difficulty_level"}), 400
 
-    questions = Question.query.filter_by(
-        difficulty_level=DifficultyLevelEnum(difficulty_level)
-    ).order_by(Question.created_at.desc()).all()
+    questions = (
+        Question.query
+        .join(QuestionOccurrence, Question.question_id == QuestionOccurrence.question_id)
+        .filter(QuestionOccurrence.difficulty_level == DifficultyLevelEnum(difficulty_level))
+        .order_by(Question.created_at.desc())
+        .distinct()
+        .all()
+    )
 
     return jsonify({
         "difficulty_level": difficulty_level,
         "questions": [serialize_question(q) for q in questions]
     }), 200
-
 
 
 @questions_bp.route("/getQuestionsByCompany/<int:company_id>", methods=["GET"])
@@ -490,14 +763,20 @@ def getQuestionsByCompany(company_id):
     if not company:
         return jsonify({"message": "Company not found"}), 404
 
-    questions = Question.query.filter_by(company_id=company_id).order_by(Question.created_at.desc()).all()
+    questions = (
+        Question.query
+        .join(QuestionOccurrence, Question.question_id == QuestionOccurrence.question_id)
+        .filter(QuestionOccurrence.company_id == company_id)
+        .order_by(Question.created_at.desc())
+        .distinct()
+        .all()
+    )
 
     return jsonify({
         "company_id": company.company_id,
         "company_name": company.company_name,
         "questions": [serialize_question(q) for q in questions]
     }), 200
-
 
 
 @questions_bp.route("/getQuestionsByCreator/<int:user_id>", methods=["GET"])
@@ -514,8 +793,6 @@ def getQuestionsByCreator(user_id):
         "creator_name": creator.name,
         "questions": [serialize_question(q) for q in questions]
     }), 200
-
-
 
 
 @questions_bp.route("/filterQuestions", methods=["POST"])
@@ -548,12 +825,14 @@ def filterQuestions():
     questions = (
         Question.query
         .join(Topic_Questions, Question.question_id == Topic_Questions.question_id)
+        .join(QuestionOccurrence, Question.question_id == QuestionOccurrence.question_id)
         .filter(
             Topic_Questions.topic_id == topic_id,
             Question.type_id == type_id,
-            Question.difficulty_level == DifficultyLevelEnum(difficulty_level)
+            QuestionOccurrence.difficulty_level == DifficultyLevelEnum(difficulty_level)
         )
         .order_by(Question.created_at.desc())
+        .distinct()
         .all()
     )
 
@@ -567,7 +846,6 @@ def filterQuestions():
         },
         "questions": [serialize_question(q) for q in questions]
     }), 200
-
 
 
 @questions_bp.route("/getQuestionsBySubject/<int:subject_id>", methods=["GET"])
@@ -603,8 +881,10 @@ def getQuestionsBySubject(subject_id):
     if difficulty_level is not None:
         if difficulty_level not in [d.value for d in DifficultyLevelEnum]:
             return jsonify({"message": "Invalid difficulty_level"}), 400
-        query = query.filter(
-            Question.difficulty_level == DifficultyLevelEnum(difficulty_level)
+        query = (
+            query
+            .join(QuestionOccurrence, Question.question_id == QuestionOccurrence.question_id)
+            .filter(QuestionOccurrence.difficulty_level == DifficultyLevelEnum(difficulty_level))
         )
 
     questions = query.order_by(Question.created_at.desc()).distinct().all()

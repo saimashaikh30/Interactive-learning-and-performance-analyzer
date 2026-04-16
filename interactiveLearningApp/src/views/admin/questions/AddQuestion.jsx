@@ -33,6 +33,13 @@ const AddQuestion = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const [grammarIssues, setGrammarIssues] = useState([]);
+  const [suggestedQuestion, setSuggestedQuestion] = useState("");
+  const [matchedQuestion, setMatchedQuestion] = useState(null);
+  const [similarityScore, setSimilarityScore] = useState(null);
+  const [serverAction, setServerAction] = useState("");
 
   const isEdit = !!id;
   const DIFFICULTY_LEVELS = ["easy", "medium", "hard"];
@@ -50,6 +57,10 @@ const AddQuestion = () => {
     const name = selectedType?.type_name?.toLowerCase() || "";
     return name === "mcq" || name === "multiple choice";
   }, [selectedType]);
+
+  const hasGrammarFeedback = grammarIssues.length > 0 || !!suggestedQuestion;
+  const isSimilarQuestionFound =
+    serverAction === "duplicate_merged" || serverAction === "semantic_duplicate_merged";
 
   useEffect(() => {
     fetchFilters();
@@ -71,6 +82,15 @@ const AddQuestion = () => {
       setTopicQuery("");
     }
   }, [subjectId]);
+
+  const resetAiFeedback = () => {
+    setGrammarIssues([]);
+    setSuggestedQuestion("");
+    setMatchedQuestion(null);
+    setSimilarityScore(null);
+    setServerAction("");
+    setSuccessMessage("");
+  };
 
   const fetchFilters = async () => {
     try {
@@ -94,17 +114,21 @@ const AddQuestion = () => {
     try {
       setLoading(true);
       setError("");
+      resetAiFeedback();
 
       const res = await axios.get(`${BASE_URL}/questions/getQuestion/${id}`);
       const q = res.data.question;
 
       setQuestionString(q.question_string || "");
-      setDifficulty(q.difficulty_level || "");
       setTypeId(q.type_id ? String(q.type_id) : "");
-      setCompanyId(q.company_id ? String(q.company_id) : "");
-      setYear(q.year || "");
-      setLanguage(q.language || "");
-      setTechnology(q.technology || "");
+
+      const latestOccurrence = q.latest_occurrence || null;
+
+      setDifficulty(latestOccurrence?.difficulty_level || "");
+      setCompanyId(latestOccurrence?.company_id ? String(latestOccurrence.company_id) : "");
+      setYear(latestOccurrence?.year || "");
+      setLanguage(latestOccurrence?.language || "");
+      setTechnology(latestOccurrence?.technology || "");
 
       const questionTopics = q.topics || [];
       setSelectedTopics(questionTopics);
@@ -133,9 +157,7 @@ const AddQuestion = () => {
 
   const fetchTopicsBySubject = async (subId) => {
     try {
-      const res = await axios.get(
-        `${BASE_URL}/topics/getTopicsBySubject/${subId}`
-      );
+      const res = await axios.get(`${BASE_URL}/topics/getTopicsBySubject/${subId}`);
       const topics = res.data.topics || [];
       setAllSubjectTopics(topics);
 
@@ -238,9 +260,20 @@ const AddQuestion = () => {
     return true;
   };
 
+  const applySuggestion = () => {
+    if (suggestedQuestion) {
+      setQuestionString(suggestedQuestion);
+      setError("");
+      setGrammarIssues([]);
+      setSuggestedQuestion("");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+
+    resetAiFeedback();
 
     const payload = {
       question_string: questionString.trim(),
@@ -267,18 +300,43 @@ const AddQuestion = () => {
       setSaving(true);
       setError("");
 
+      let res;
       if (isEdit) {
-        await axios.put(`${BASE_URL}/questions/editQuestion`, {
+        res = await axios.put(`${BASE_URL}/questions/editQuestion`, {
           question_id: Number(id),
           ...payload,
         });
       } else {
-        await axios.post(`${BASE_URL}/questions/addQuestion`, payload);
+        res = await axios.post(`${BASE_URL}/questions/addQuestion`, payload);
       }
 
-      navigate("/admin/questions");
+      const data = res.data || {};
+
+      setServerAction(data.action || "");
+      setMatchedQuestion(data.matched_question || null);
+      setSimilarityScore(
+        typeof data.similarity_score === "number" ? data.similarity_score : null
+      );
+
+      if (data.action === "duplicate_merged" || data.action === "semantic_duplicate_merged") {
+        setSuccessMessage("Similar question exists. Your entry noted.");
+        return;
+      }
+
+      if (data.action === "new_question_added" || isEdit) {
+        navigate("/admin/questions");
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save question");
+      const data = err.response?.data || {};
+
+      setError(data.message || "Failed to save question");
+      setGrammarIssues(data.issues || []);
+      setSuggestedQuestion(data.suggested_question || "");
+      setMatchedQuestion(data.matched_question || null);
+      setSimilarityScore(
+        typeof data.similarity_score === "number" ? data.similarity_score : null
+      );
+      setServerAction(data.action || "");
     } finally {
       setSaving(false);
     }
@@ -308,25 +366,42 @@ const AddQuestion = () => {
           </div>
         )}
 
+        {successMessage && (
+          <div className="rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {successMessage}
+          </div>
+        )}
+
+        {/* {hasGrammarFeedback && (
+          <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            Grammatically incorrect
+          </div>
+        )} */}
+
+        {suggestedQuestion && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+            <h2 className="mb-2 text-sm font-semibold text-amber-800">
+              Use suggestion
+            </h2>
+            <p className="rounded-lg bg-white px-3 py-2 text-sm text-gray-800">
+              {suggestedQuestion}
+            </p>
+            <button
+              type="button"
+              onClick={applySuggestion}
+              className="mt-3 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              Use this suggestion
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="rounded-xl bg-white p-8 text-center text-gray-600 shadow">
             Loading question...
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-xl bg-white p-4 shadow">
-              <label className="mb-1 block text-lg font-semibold text-gray-700">
-                Question <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={questionString}
-                onChange={(e) => setQuestionString(e.target.value)}
-                rows={4}
-                className="h-24 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your question"
-              />
-            </div>
-
             <div className="space-y-4 rounded-xl bg-white p-4 shadow">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
@@ -401,7 +476,7 @@ const AddQuestion = () => {
                   />
 
                   {topicSuggestions.length > 0 && (
-                    <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto text-gray-900 rounded-lg border border-gray-300 bg-white text-sm shadow">
+                    <ul className="absolute z-20 mt-1 max-h-40 w-full overflow-y-auto rounded-lg border border-gray-300 bg-white text-sm text-gray-900 shadow">
                       {topicSuggestions.map((t) => (
                         <li
                           key={t.topic_id}
@@ -507,6 +582,19 @@ const AddQuestion = () => {
                 value={technology}
                 onChange={(e) => setTechnology(e.target.value)}
                 className="h-10 w-full rounded-lg border px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="rounded-xl bg-white p-4 shadow">
+              <label className="mb-1 block text-lg font-semibold text-gray-700">
+                Question <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={questionString}
+                onChange={(e) => setQuestionString(e.target.value)}
+                rows={4}
+                className="h-24 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your question"
               />
             </div>
 

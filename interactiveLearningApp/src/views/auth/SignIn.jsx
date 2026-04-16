@@ -53,8 +53,8 @@ export default function SignIn() {
   };
 
   const redirectByRole = (role) => {
-    if (role === "user" || role === "contributor") {
-      navigate("/user", { replace: true });
+    if (role === "student" || role === "contributor") {
+      navigate("/student", { replace: true });
     } else {
       navigate("/admin", { replace: true });
     }

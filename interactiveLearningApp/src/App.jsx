@@ -39,7 +39,7 @@ const App = () => {
       </Route>
 
       {/* User Middleware */}
-      <Route element={<RequireAuth allowedRoles={["user", "contributor"]} />}>
+      <Route element={<RequireAuth allowedRoles={["student", "contributor"]} />}>
         <Route path="user" element={<UserLayout />}>
           {/* Default dashboard */}
           <Route index element={<UserDashboard />} />

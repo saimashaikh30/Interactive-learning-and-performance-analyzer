@@ -1,0 +1,236 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+
+/* ─── Base ─────────────────────────────────────────── */
+.dt-wrap,
+.dt-wrap * {
+  font-family: 'Outfit', sans-serif;
+  box-sizing: border-box;
+}
+
+/* ─── Card ──────────────────────────────────────────── */
+.dt-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04), 0 4px 16px 0 rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+
+.dt-scroll {
+  overflow-x: auto;
+}
+
+/* ─── Table ─────────────────────────────────────────── */
+.dt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ─── Head ──────────────────────────────────────────── */
+.dt-thead {
+  background: #4e8ac7;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dt-th {
+  padding: 13px 20px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+/* ─── Rows ──────────────────────────────────────────── */
+.dt-row {
+  transition: background 0.12s ease;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.dt-row:last-child {
+  border-bottom: none;
+}
+
+/* Alternating row colors */
+.dt-row:nth-child(even) {
+  background-color: #f4f8fc;
+}
+
+.dt-row:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.dt-row:hover {
+  background-color: #eff6ff !important;
+}
+
+/* ─── Cells ─────────────────────────────────────────── */
+.dt-td {
+  padding: 14px 20px;
+  vertical-align: middle;
+}
+
+/* ─── Text Variants ─────────────────────────────────── */
+.dt-text-primary {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.dt-text-secondary {
+  font-size: 14px;
+  font-weight: 400;
+  color: #334155;
+}
+
+.dt-text-muted {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* ─── Avatar ────────────────────────────────────────── */
+.dt-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dt-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ─── Badge ─────────────────────────────────────────── */
+.dt-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Empty / Loading ───────────────────────────────── */
+.dt-empty {
+  padding: 60px 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.dt-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: dt-shimmer 1.4s infinite;
+  border-radius: 6px;
+  height: 13px;
+}
+
+@keyframes dt-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Pagination ────────────────────────────────────── */
+.dt-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+}
+
+.dt-pg-info {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.dt-pg-info strong {
+  color: #1e293b;
+}
+
+.dt-pg-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dt-pg-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  background: transparent;
+  color: #4e8ac7;
+  font-family: 'Outfit', sans-serif;
+}
+
+.dt-pg-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  color: #4e8ac7;
+}
+
+.dt-pg-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.dt-pg-btn.dt-pg-active {
+  background: #4e8ac7;
+  color: #ffffff;
+}
+
+.dt-pg-ellipsis {
+  font-size: 13px;
+  color: #cbd5e1;
+  padding: 0 2px;
+}
+
+/* ─── Page Header ───────────────────────────────────── */
+.dt-page-header {
+  margin-bottom: 24px;
+}
+
+.dt-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.dt-page-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ─── Error Banner ──────────────────────────────────── */
+.dt-error {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #dc2626;
+}

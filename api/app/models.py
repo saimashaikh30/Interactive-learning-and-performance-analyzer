@@ -11,7 +11,7 @@ class AuthProviderEnum(enum.Enum):
 class UserRoleEnum(enum.Enum):
     admin = "admin"
     superadmin = "superadmin"
-    user = "user"
+    student = "student"
     contributor = "contributor"
 
 
@@ -32,8 +32,8 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
+    name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(70), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=True)
 
     role = db.Column(
@@ -53,12 +53,26 @@ class User(db.Model):
         onupdate=datetime.utcnow
     )
 
+    created_questions = db.relationship(
+        "Question",
+        backref="creator",
+        lazy=True,
+        foreign_keys="Question.created_by"
+    )
+
+    created_occurrences = db.relationship(
+        "QuestionOccurrence",
+        backref="creator",
+        lazy=True,
+        foreign_keys="QuestionOccurrence.created_by"
+    )
+
 
 class Domain(db.Model):
     __tablename__ = "domains"
 
     domain_id = db.Column(db.Integer, primary_key=True)
-    domain_name = db.Column(db.String(50), unique=True, nullable=False)
+    domain_name = db.Column(db.String(30), unique=True, nullable=False)
 
     subjects = db.relationship(
         "Subject",
@@ -72,8 +86,8 @@ class Subject(db.Model):
     __tablename__ = "subjects"
 
     subject_id = db.Column(db.Integer, primary_key=True)
-    subject_code = db.Column(db.String(10), nullable=False, unique=True)
-    subject_name = db.Column(db.String(100), nullable=False)
+    subject_code = db.Column(db.String(6), nullable=False, unique=True)
+    subject_name = db.Column(db.String(30), nullable=False)
 
     domain_id = db.Column(
         db.Integer,
@@ -89,7 +103,11 @@ class Subject(db.Model):
     )
 
     __table_args__ = (
-        db.UniqueConstraint("subject_name", "domain_id", name="uq_subject_name_domain"),
+        db.UniqueConstraint(
+            "subject_name",
+            "domain_id",
+            name="uq_subject_name_domain"
+        ),
     )
 
 
@@ -97,7 +115,7 @@ class Topic(db.Model):
     __tablename__ = "topics"
 
     topic_id = db.Column(db.Integer, primary_key=True)
-    topic_name = db.Column(db.String(100), nullable=False)
+    topic_name = db.Column(db.String(50), nullable=False)
 
     subject_id = db.Column(
         db.Integer,
@@ -106,7 +124,11 @@ class Topic(db.Model):
     )
 
     __table_args__ = (
-        db.UniqueConstraint("topic_name", "subject_id", name="uq_topic_name_subject"),
+        db.UniqueConstraint(
+            "topic_name",
+            "subject_id",
+            name="uq_topic_name_subject"
+        ),
     )
 
 
@@ -114,10 +136,10 @@ class Company(db.Model):
     __tablename__ = "companies"
 
     company_id = db.Column(db.Integer, primary_key=True)
-    company_name = db.Column(db.String(100), unique=True, nullable=False)
+    company_name = db.Column(db.String(50), unique=True, nullable=False)
 
-    questions = db.relationship(
-        "Question",
+    question_occurrences = db.relationship(
+        "QuestionOccurrence",
         backref="company",
         lazy=True
     )
@@ -127,7 +149,7 @@ class QuestionType(db.Model):
     __tablename__ = "question_types"
 
     type_id = db.Column(db.Integer, primary_key=True)
-    type_name = db.Column(db.String(50), unique=True, nullable=False)
+    type_name = db.Column(db.String(20), unique=True, nullable=False)
 
     questions = db.relationship(
         "Question",
@@ -158,21 +180,6 @@ class Question(db.Model):
     question_id = db.Column(db.Integer, primary_key=True)
     question_string = db.Column(db.Text, nullable=False)
 
-    difficulty_level = db.Column(
-        db.Enum(DifficultyLevelEnum, name="difficulty_level_enum"),
-        nullable=False
-    )
-
-    year = db.Column(db.String(4), nullable=True)
-    technology = db.Column(db.String(50), nullable=True)
-    language = db.Column(db.String(30), nullable=True)
-
-    company_id = db.Column(
-        db.Integer,
-        db.ForeignKey("companies.company_id"),
-        nullable=True
-    )
-
     type_id = db.Column(
         db.Integer,
         db.ForeignKey("question_types.type_id"),
@@ -192,12 +199,6 @@ class Question(db.Model):
         onupdate=datetime.utcnow
     )
 
-    creator = db.relationship(
-        "User",
-        backref="created_questions",
-        foreign_keys=[created_by]
-    )
-
     topics = db.relationship(
         "Topic",
         secondary="topic_questions",
@@ -209,6 +210,60 @@ class Question(db.Model):
         backref="question",
         cascade="all, delete-orphan",
         lazy=True
+    )
+
+    occurrences = db.relationship(
+        "QuestionOccurrence",
+        backref="question",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+
+class QuestionOccurrence(db.Model):
+    __tablename__ = "question_occurrences"
+
+    occurrence_id = db.Column(db.Integer, primary_key=True)
+
+    question_id = db.Column(
+        db.Integer,
+        db.ForeignKey("questions.question_id"),
+        nullable=False
+    )
+
+    company_id = db.Column(
+        db.Integer,
+        db.ForeignKey("companies.company_id"),
+        nullable=True
+    )
+
+    year = db.Column(db.String(4), nullable=True)
+    language = db.Column(db.String(30), nullable=True)
+    technology = db.Column(db.String(50), nullable=True)
+
+    difficulty_level = db.Column(
+        db.Enum(DifficultyLevelEnum, name="difficulty_level_enum"),
+        nullable=True
+    )
+
+    created_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "question_id",
+            "company_id",
+            "year",
+            "language",
+            "technology",
+            "difficulty_level",
+            name="uq_question_occurrence"
+        ),
     )
 
 
