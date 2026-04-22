@@ -352,7 +352,7 @@ def revokeContributorRequest():
         contributor_request.reviewed_at = datetime.utcnow()
         contributor_request.remarks = remarks
 
-        user.role = UserRoleEnum.user
+        user.role = UserRoleEnum.student
 
         db.session.commit()
 

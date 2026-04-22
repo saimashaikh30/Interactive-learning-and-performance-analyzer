@@ -116,7 +116,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           "email": email,
           "password": password,
           "authprovider": "local",
-          "role":"user"
+          "role":"student"
         }),
       );
 

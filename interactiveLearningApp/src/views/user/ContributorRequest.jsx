@@ -7,15 +7,23 @@ export default function ContributorRequest() {
   const [message, setMessage] = useState("");
 
   const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("user_id"); // ✅ get user_id
 
   // Fetch user's requests
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://127.0.0.1:5000/contributorrequests/myRequests", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRequests(res.data.requests);
+
+      const res = await axios.get(
+        "http://127.0.0.1:5000/contributorRequests/getContributorRequests"
+      );
+
+      // ✅ filter only current user's requests
+      const filtered = res.data.requests.filter(
+        (r) => String(r.user_id) === String(userId)
+      );
+
+      setRequests(filtered);
     } catch (err) {
       console.error(err);
     } finally {
@@ -30,18 +38,34 @@ export default function ContributorRequest() {
   // Submit a contributor request
   const handleRequest = async () => {
     try {
-      await axios.post(
-        "http://127.0.0.1:5000/contributorrequests",
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      if (!token || !userId) {
+        setMessage("Please login first");
+        return;
+      }
+
+      const res = await axios.post(
+        "http://127.0.0.1:5000/contributorRequests/addContributorRequest",
+        {
+          user_id: parseInt(userId), // ✅ REQUIRED
+          remarks: "",               // optional
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      setMessage("Request submitted successfully!");
+
+      setMessage(res.data.message || "Request submitted successfully!");
       fetchRequests();
     } catch (err) {
       console.error(err);
-      setMessage("Failed to submit request.");
+      setMessage(err.response?.data?.message || "Failed to submit request.");
     }
   };
+
+  // check if already pending
+  const hasPending = requests.some((r) => r.status === "pending");
 
   return (
     <div className="flex flex-col space-y-8">
@@ -59,10 +83,16 @@ export default function ContributorRequest() {
           </p>
         </div>
         <button
+          type="button"
           onClick={handleRequest}
-          className="mt-3 md:mt-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:from-blue-600 hover:to-indigo-700 transition"
+          disabled={hasPending}
+          className={`mt-3 md:mt-0 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition ${
+            hasPending
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+          }`}
         >
-          Request Access
+          {hasPending ? "Request Pending" : "Request Access"}
         </button>
       </div>
 
@@ -87,7 +117,9 @@ export default function ContributorRequest() {
               <tr className="bg-gray-100">
                 <th className="px-6 py-3 border-b text-gray-700">Request ID</th>
                 <th className="px-6 py-3 border-b text-gray-700">Status</th>
-                <th className="px-6 py-3 border-b text-gray-700">Requested On</th>
+                <th className="px-6 py-3 border-b text-gray-700">
+                  Requested On
+                </th>
               </tr>
             </thead>
             <tbody>

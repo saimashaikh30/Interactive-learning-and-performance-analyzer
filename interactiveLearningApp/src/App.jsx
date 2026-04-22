@@ -15,6 +15,9 @@ import UserDomains from "views/user/UserDomains";
 import UserSubjects from "views/user/UserSubjects";
 import UserTopics from "views/user/UserTopics";
 import ContributorRequest from "views/user/ContributorRequest";
+import ContributorQuestions from "views/user/Questions";
+import UserQuestions from "views/user/UserQuestions";
+import AddQuestion from "views/admin/questions/AddQuestion";
 
 import RequireAuth from "./middleware/RequireAuth";
 
@@ -45,9 +48,14 @@ const App = () => {
           <Route index element={<UserDashboard />} />
 
           {/* User pages */}
-          <Route path="domains" element={<UserDomains />} />
+          <Route path="dashboard" element={<UserDashboard />} />
+          {/* <Route path="domains" element={<UserDomains />} />
           <Route path="subjects" element={<UserSubjects />} />
-          <Route path="topics" element={<UserTopics />} />
+          <Route path="topics" element={<UserTopics />} /> */}
+
+          <Route path="contribute" element={<ContributorQuestions />} />
+          <Route path="addQuestion" element={<AddQuestion />} />
+          <Route path="userQuestions" element={<UserQuestions />} />
 
           {/* Contributor Requests */}
           <Route path="contributor-requests" element={<ContributorRequest />} />

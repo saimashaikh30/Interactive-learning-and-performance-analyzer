@@ -85,18 +85,49 @@ class _QuestionsListState extends State<QuestionsList> {
 
         final List<Map<String, dynamic>> loadedQuestions =
             questionList.map<Map<String, dynamic>>((item) {
+          final latestOccurrence =
+              item["latest_occurrence"] is Map<String, dynamic>
+                  ? Map<String, dynamic>.from(item["latest_occurrence"])
+                  : <String, dynamic>{};
+
+          final companyNames = List<String>.from(item["company_names"] ?? []);
+          final difficultyLevels =
+              List<String>.from(item["difficulty_levels"] ?? []);
+          final years = List<String>.from(
+            (item["years"] ?? []).map((e) => e.toString()),
+          );
+          final languages = List<String>.from(item["languages"] ?? []);
+          final technologies = List<String>.from(item["technologies"] ?? []);
+
           return {
             "id": item["question_id"],
             "question": item["question_string"] ?? "",
-            "difficulty_level": item["difficulty_level"] ?? "",
             "type_name": item["type_name"] ?? "",
-            "company_name": item["company_name"] ?? "",
-            "technology": item["technology"] ?? "",
-            "language": item["language"] ?? "",
-            "year": item["year"]?.toString() ?? "",
             "creator_name": item["creator_name"] ?? "",
-            "topics": item["topics"] ?? [],
-            "options": item["options"] ?? [],
+            "topics": List<Map<String, dynamic>>.from(item["topics"] ?? []),
+            "options": List<Map<String, dynamic>>.from(item["options"] ?? []),
+            "appearance_count": item["appearance_count"] ?? 0,
+            "difficulty_level":
+                latestOccurrence["difficulty_level"] ??
+                (difficultyLevels.isNotEmpty ? difficultyLevels.first : ""),
+            "company_name":
+                latestOccurrence["company_name"] ??
+                (companyNames.isNotEmpty ? companyNames.join(", ") : ""),
+            "technology":
+                latestOccurrence["technology"] ??
+                (technologies.isNotEmpty ? technologies.join(", ") : ""),
+            "language":
+                latestOccurrence["language"] ??
+                (languages.isNotEmpty ? languages.join(", ") : ""),
+            "year":
+                latestOccurrence["year"]?.toString() ??
+                (years.isNotEmpty ? years.join(", ") : ""),
+            "company_names": companyNames,
+            "difficulty_levels": difficultyLevels,
+            "years": years,
+            "languages": languages,
+            "technologies": technologies,
+            "latest_occurrence": latestOccurrence,
           };
         }).toList();
 
@@ -136,6 +167,8 @@ class _QuestionsListState extends State<QuestionsList> {
       final technology = (q["technology"] ?? "").toString().toLowerCase();
       final language = (q["language"] ?? "").toString().toLowerCase();
       final year = (q["year"] ?? "").toString().toLowerCase();
+      final appearanceCount =
+          (q["appearance_count"] ?? "").toString().toLowerCase();
 
       final List topics = q["topics"] ?? [];
       final topicNames = topics
@@ -149,6 +182,7 @@ class _QuestionsListState extends State<QuestionsList> {
           technology.contains(search) ||
           language.contains(search) ||
           year.contains(search) ||
+          appearanceCount.contains(search) ||
           topicNames.contains(search);
     }).toList();
 
@@ -174,19 +208,30 @@ class _QuestionsListState extends State<QuestionsList> {
     );
   }
 
-  Widget buildTag(String text, {Color? color, Color? textColor}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color ?? const Color(0xffEEEAFE),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: textColor ?? const Color(0xff6246EA),
+  Widget buildTag(
+    String text, {
+    Color? color,
+    Color? textColor,
+    double maxWidth = 140,
+  }) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color ?? const Color(0xffEEEAFE),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: textColor ?? const Color(0xff6246EA),
+          ),
         ),
       ),
     );
@@ -234,6 +279,9 @@ class _QuestionsListState extends State<QuestionsList> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final tagMaxWidth = (screenWidth - 80) / 2;
+
     return Scaffold(
       backgroundColor: const Color(0xffF4F6FA),
       body: RefreshIndicator(
@@ -267,6 +315,8 @@ class _QuestionsListState extends State<QuestionsList> {
                       const SizedBox(height: 6),
                       Text(
                         "Questions added by $userName",
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -398,6 +448,7 @@ class _QuestionsListState extends State<QuestionsList> {
                                           .isNotEmpty)
                                         buildTag(
                                           question["difficulty_level"],
+                                          maxWidth: tagMaxWidth,
                                           color: getDifficultyBg(
                                             question["difficulty_level"],
                                           ),
@@ -408,15 +459,31 @@ class _QuestionsListState extends State<QuestionsList> {
                                       if ((question["type_name"] ?? "")
                                           .toString()
                                           .isNotEmpty)
-                                        buildTag(question["type_name"]),
+                                        buildTag(
+                                          question["type_name"],
+                                          maxWidth: tagMaxWidth,
+                                        ),
                                       if ((question["company_name"] ?? "")
                                           .toString()
                                           .isNotEmpty)
-                                        buildTag(question["company_name"]),
+                                        buildTag(
+                                          question["company_name"],
+                                          maxWidth: tagMaxWidth,
+                                        ),
                                       if ((question["year"] ?? "")
                                           .toString()
                                           .isNotEmpty)
-                                        buildTag(question["year"]),
+                                        buildTag(
+                                          question["year"],
+                                          maxWidth: tagMaxWidth,
+                                        ),
+                                      if ((question["appearance_count"] ?? 0) > 0)
+                                        buildTag(
+                                          "${question["appearance_count"]} times",
+                                          maxWidth: tagMaxWidth,
+                                          color: const Color(0xffE0F2FE),
+                                          textColor: const Color(0xff0369A1),
+                                        ),
                                     ],
                                   ),
                                   const SizedBox(height: 12),
@@ -427,6 +494,8 @@ class _QuestionsListState extends State<QuestionsList> {
                                       padding: const EdgeInsets.only(bottom: 6),
                                       child: Text(
                                         "Technology: ${question["technology"]}",
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontSize: 13,
                                           color: Colors.black87,
@@ -440,6 +509,8 @@ class _QuestionsListState extends State<QuestionsList> {
                                       padding: const EdgeInsets.only(bottom: 6),
                                       child: Text(
                                         "Language: ${question["language"]}",
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontSize: 13,
                                           color: Colors.black87,
@@ -451,6 +522,7 @@ class _QuestionsListState extends State<QuestionsList> {
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: Colors.black87,
+                                      height: 1.4,
                                     ),
                                   ),
                                 ],

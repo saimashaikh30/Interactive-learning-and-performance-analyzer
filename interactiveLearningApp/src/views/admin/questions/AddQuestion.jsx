@@ -48,6 +48,17 @@ const AddQuestion = () => {
 
   const createdBy = Number(localStorage.getItem("user_id")) || 2;
 
+  const role =
+    (localStorage.getItem("role") ||
+      localStorage.getItem("user_role") ||
+      "")
+      .toLowerCase();
+
+  const redirectPath =
+    role === "admin" || role === "superadmin"
+      ? "/admin/questions"
+      : "/user/dashboard";
+
   const selectedType = useMemo(
     () => types.find((t) => Number(t.type_id) === Number(typeId)),
     [types, typeId]
@@ -57,10 +68,6 @@ const AddQuestion = () => {
     const name = selectedType?.type_name?.toLowerCase() || "";
     return name === "mcq" || name === "multiple choice";
   }, [selectedType]);
-
-  const hasGrammarFeedback = grammarIssues.length > 0 || !!suggestedQuestion;
-  const isSimilarQuestionFound =
-    serverAction === "duplicate_merged" || serverAction === "semantic_duplicate_merged";
 
   useEffect(() => {
     fetchFilters();
@@ -125,7 +132,11 @@ const AddQuestion = () => {
       const latestOccurrence = q.latest_occurrence || null;
 
       setDifficulty(latestOccurrence?.difficulty_level || "");
-      setCompanyId(latestOccurrence?.company_id ? String(latestOccurrence.company_id) : "");
+      setCompanyId(
+        latestOccurrence?.company_id
+          ? String(latestOccurrence.company_id)
+          : ""
+      );
       setYear(latestOccurrence?.year || "");
       setLanguage(latestOccurrence?.language || "");
       setTechnology(latestOccurrence?.technology || "");
@@ -318,13 +329,17 @@ const AddQuestion = () => {
         typeof data.similarity_score === "number" ? data.similarity_score : null
       );
 
-      if (data.action === "duplicate_merged" || data.action === "semantic_duplicate_merged") {
+      if (
+        data.action === "duplicate_merged" ||
+        data.action === "semantic_duplicate_merged"
+      ) {
         setSuccessMessage("Similar question exists. Your entry noted.");
+        navigate(redirectPath);
         return;
       }
 
       if (data.action === "new_question_added" || isEdit) {
-        navigate("/admin/questions");
+        navigate(redirectPath);
       }
     } catch (err) {
       const data = err.response?.data || {};
@@ -353,6 +368,10 @@ const AddQuestion = () => {
   const formatDifficulty = (value) =>
     value.charAt(0).toUpperCase() + value.slice(1);
 
+  const shouldShowSuggestion =
+    suggestedQuestion &&
+    suggestedQuestion.trim().toLowerCase() !== questionString.trim().toLowerCase();
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="space-y-6 rounded-2xl bg-gray-50 p-6 shadow-lg">
@@ -372,13 +391,7 @@ const AddQuestion = () => {
           </div>
         )}
 
-        {/* {hasGrammarFeedback && (
-          <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            Grammatically incorrect
-          </div>
-        )} */}
-
-        {suggestedQuestion && (
+        {shouldShowSuggestion && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
             <h2 className="mb-2 text-sm font-semibold text-amber-800">
               Use suggestion
@@ -601,7 +614,7 @@ const AddQuestion = () => {
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => navigate("/admin/questions")}
+                onClick={() => navigate(redirectPath)}
                 className="h-10 rounded-lg border border-gray-300 bg-white px-4 text-gray-700 hover:bg-gray-100"
               >
                 Cancel

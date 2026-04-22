@@ -142,7 +142,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await prefs.setString("name", (user["name"] ?? "User").toString());
         await prefs.setString("username", (user["name"] ?? "User").toString());
         await prefs.setString("email", (user["email"] ?? "").toString());
-        await prefs.setString("role", (user["role"] ?? "user").toString());
+        await prefs.setString("role", (user["role"] ?? "student").toString());
 
         if (!mounted) return;
 

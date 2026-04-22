@@ -45,6 +45,20 @@ class _AddQuestionsState extends State<AddQuestions> {
 
   int? createdBy;
 
+  String? errorMessage;
+  String? successMessage;
+  String? suggestedQuestion;
+  String? serverAction;
+  double? similarityScore;
+
+  bool alignmentIssue = false;
+  double? alignmentScore;
+  String? matchedTopic;
+  String? alignmentDetails;
+
+  List<Map<String, dynamic>> grammarIssues = [];
+  Map<String, dynamic>? matchedQuestion;
+
   final List<String> difficultyLevels = ["easy", "medium", "hard"];
 
   bool get isEdit => widget.questionId != null;
@@ -67,6 +81,13 @@ class _AddQuestionsState extends State<AddQuestions> {
   bool get isMcqType {
     final name = (selectedType?["type_name"] ?? "").toString().toLowerCase();
     return name == "mcq" || name == "multiple choice";
+  }
+
+  bool get shouldShowSuggestion {
+    final suggestion = suggestedQuestion?.trim();
+    final current = questionController.text.trim();
+    if (suggestion == null || suggestion.isEmpty) return false;
+    return suggestion.toLowerCase() != current.toLowerCase();
   }
 
   @override
@@ -99,6 +120,22 @@ class _AddQuestionsState extends State<AddQuestions> {
 
     setState(() {
       createdBy = storedUserId;
+    });
+  }
+
+  void clearServerFeedback() {
+    setState(() {
+      errorMessage = null;
+      successMessage = null;
+      suggestedQuestion = null;
+      serverAction = null;
+      similarityScore = null;
+      alignmentIssue = false;
+      alignmentScore = null;
+      matchedTopic = null;
+      alignmentDetails = null;
+      grammarIssues = [];
+      matchedQuestion = null;
     });
   }
 
@@ -169,9 +206,12 @@ class _AddQuestionsState extends State<AddQuestions> {
         isLoading = true;
       });
 
+      clearServerFeedback();
+
       final response = await http.get(
         Uri.parse(
-            "${AppConfig.baseUrl}/questions/getQuestion/${widget.questionId}"),
+          "${AppConfig.baseUrl}/questions/getQuestion/${widget.questionId}",
+        ),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -185,12 +225,18 @@ class _AddQuestionsState extends State<AddQuestions> {
       final q = data["question"];
 
       questionController.text = (q["question_string"] ?? "").toString().trim();
-      selectedDifficulty = q["difficulty_level"]?.toString();
       selectedTypeId = q["type_id"];
-      selectedCompanyId = q["company_id"];
-      selectedYear = q["year"]?.toString();
-      languageController.text = (q["language"] ?? "").toString().trim();
-      technologyController.text = (q["technology"] ?? "").toString().trim();
+
+      final latestOccurrence = q["latest_occurrence"];
+      if (latestOccurrence != null) {
+        selectedDifficulty = latestOccurrence["difficulty_level"]?.toString();
+        selectedCompanyId = latestOccurrence["company_id"];
+        selectedYear = latestOccurrence["year"]?.toString();
+        languageController.text =
+            (latestOccurrence["language"] ?? "").toString().trim();
+        technologyController.text =
+            (latestOccurrence["technology"] ?? "").toString().trim();
+      }
 
       final topics = List<Map<String, dynamic>>.from(q["topics"] ?? []);
       selectedTopics = topics;
@@ -484,6 +530,8 @@ class _AddQuestionsState extends State<AddQuestions> {
   Future<void> handleSubmit() async {
     if (!validateForm()) return;
 
+    clearServerFeedback();
+
     final payload = {
       "question_string": normalizeText(questionController.text),
       "difficulty_level": selectedDifficulty,
@@ -538,15 +586,75 @@ class _AddQuestionsState extends State<AddQuestions> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final action = data["action"]?.toString();
+        final matched =
+            data["matched_question"] is Map<String, dynamic>
+                ? Map<String, dynamic>.from(data["matched_question"])
+                : null;
+
+        if (mounted) {
+          setState(() {
+            serverAction = action;
+            matchedQuestion = matched;
+            similarityScore =
+                data["similarity_score"] is num
+                    ? (data["similarity_score"] as num).toDouble()
+                    : null;
+          });
+        }
+
+        if (action == "duplicate_merged" ||
+            action == "semantic_duplicate_merged") {
+          setState(() {
+            successMessage =
+                data["message"]?.toString() ??
+                "A similar question already exists.";
+          });
+          return;
+        }
+
         showSnackBar(
           isEdit
               ? "Question updated successfully"
               : "Question added successfully",
         );
+
         if (!mounted) return;
         Navigator.pop(context, true);
       } else {
-        showSnackBar(data["message"] ?? "Failed to save question");
+        if (!mounted) return;
+
+        setState(() {
+          errorMessage = data["message"]?.toString() ?? "Failed to save question";
+
+          suggestedQuestion = data["suggested_question"]?.toString();
+
+          grammarIssues =
+              (data["issues"] is List)
+                  ? List<Map<String, dynamic>>.from(data["issues"])
+                  : [];
+
+          alignmentIssue = data["alignment_issue"] == true;
+
+          alignmentScore =
+              data["alignment_score"] is num
+                  ? (data["alignment_score"] as num).toDouble()
+                  : null;
+
+          matchedTopic = data["matched_topic"]?.toString();
+          alignmentDetails = data["details"]?.toString();
+
+          serverAction = data["action"]?.toString();
+          matchedQuestion =
+              data["matched_question"] is Map<String, dynamic>
+                  ? Map<String, dynamic>.from(data["matched_question"])
+                  : null;
+
+          similarityScore =
+              data["similarity_score"] is num
+                  ? (data["similarity_score"] as num).toDouble()
+                  : null;
+        });
       }
     } catch (e) {
       showSnackBar("Failed to save question");
@@ -557,6 +665,18 @@ class _AddQuestionsState extends State<AddQuestions> {
         });
       }
     }
+  }
+
+  void applySuggestion() {
+    final suggestion = suggestedQuestion?.trim();
+    if (suggestion == null || suggestion.isEmpty) return;
+
+    setState(() {
+      questionController.text = suggestion;
+      suggestedQuestion = null;
+      grammarIssues = [];
+      errorMessage = null;
+    });
   }
 
   void showSnackBar(String message) {
@@ -575,9 +695,10 @@ class _AddQuestionsState extends State<AddQuestions> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xffE8ECF4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -598,14 +719,15 @@ class _AddQuestionsState extends State<AddQuestions> {
             fontWeight: FontWeight.w600,
             color: Colors.black87,
           ),
-          children: required
-              ? const [
-                  TextSpan(
-                    text: " *",
-                    style: TextStyle(color: Colors.red),
-                  )
-                ]
-              : [],
+          children:
+              required
+                  ? const [
+                    TextSpan(
+                      text: " *",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ]
+                  : [],
         ),
       ),
     );
@@ -619,12 +741,16 @@ class _AddQuestionsState extends State<AddQuestions> {
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      style: const TextStyle(color: Colors.black87),
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: const TextStyle(color: Colors.grey),
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xffD9D9D9)),
@@ -652,12 +778,16 @@ class _AddQuestionsState extends State<AddQuestions> {
       isExpanded: true,
       items: items,
       onChanged: onChanged,
+      style: const TextStyle(color: Colors.black87),
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: const TextStyle(color: Colors.grey),
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xffD9D9D9)),
@@ -671,6 +801,329 @@ class _AddQuestionsState extends State<AddQuestions> {
           borderSide: const BorderSide(color: Color(0xff6246EA), width: 1.5),
         ),
       ),
+    );
+  }
+
+  Widget buildFeedbackCard({
+    required Color bgColor,
+    required Color borderColor,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required Widget child,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: iconColor),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: iconColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget buildIssueItem(Map<String, dynamic> issue) {
+    final message = (issue["message"] ?? "").toString().trim();
+    final replacement = (issue["replacement"] ?? "").toString().trim();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xffF1D8A7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message.isEmpty ? "Grammar issue found" : message,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (replacement.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              "Suggestion: $replacement",
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xff8A5A00),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget buildMatchedQuestionCard() {
+    if (matchedQuestion == null) return const SizedBox.shrink();
+
+    final text = (matchedQuestion!["question_string"] ?? "").toString();
+    final typeName = (matchedQuestion!["type_name"] ?? "").toString();
+    final appearances = matchedQuestion!["appearance_count"]?.toString();
+
+    return buildFeedbackCard(
+      bgColor: const Color(0xffECFDF3),
+      borderColor: const Color(0xffB7E4C7),
+      icon: Icons.check_circle_outline,
+      iconColor: const Color(0xff1E7A46),
+      title: "Similar question found",
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xffD7F0DE)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (typeName.isNotEmpty)
+                  _buildMiniBadge(typeName, const Color(0xffEEF2FF),
+                      const Color(0xff4F46E5)),
+                if (appearances != null && appearances.isNotEmpty)
+                  _buildMiniBadge("$appearances appearances",
+                      const Color(0xffF0FDF4), const Color(0xff15803D)),
+                if (similarityScore != null)
+                  _buildMiniBadge(
+                    "Similarity ${similarityScore!.toStringAsFixed(2)}",
+                    const Color(0xffFFF7ED),
+                    const Color(0xffC2410C),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniBadge(String text, Color bg, Color fg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          color: fg,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget buildTopFeedback() {
+    final widgets = <Widget>[];
+
+    if (errorMessage != null && errorMessage!.trim().isNotEmpty) {
+      widgets.add(
+        buildFeedbackCard(
+          bgColor: const Color(0xffFEF2F2),
+          borderColor: const Color(0xffF8CACA),
+          icon: Icons.error_outline,
+          iconColor: const Color(0xffC62828),
+          title: "Could not save question",
+          child: Text(
+            errorMessage!,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (grammarIssues.isNotEmpty) {
+      widgets.add(
+        buildFeedbackCard(
+          bgColor: const Color(0xffFFF8E8),
+          borderColor: const Color(0xffF1D8A7),
+          icon: Icons.spellcheck_rounded,
+          iconColor: const Color(0xffA15C00),
+          title: "Grammar feedback",
+          child: Column(
+            children: grammarIssues.map(buildIssueItem).toList(),
+          ),
+        ),
+      );
+    }
+
+    if (shouldShowSuggestion) {
+      widgets.add(
+        buildFeedbackCard(
+          bgColor: const Color(0xffEFF6FF),
+          borderColor: const Color(0xffBFDBFE),
+          icon: Icons.auto_fix_high_outlined,
+          iconColor: const Color(0xff1D4ED8),
+          title: "Suggested question",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xffD6E4FF)),
+                ),
+                child: Text(
+                  suggestedQuestion ?? "",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: applySuggestion,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text("Use this suggestion"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff2563EB),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (alignmentIssue) {
+      widgets.add(
+        buildFeedbackCard(
+          bgColor: const Color(0xffFFF7ED),
+          borderColor: const Color(0xffFED7AA),
+          icon: Icons.account_tree_outlined,
+          iconColor: const Color(0xffC2410C),
+          title: "Subject / topic mismatch",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (alignmentDetails != null && alignmentDetails!.isNotEmpty)
+                Text(
+                  alignmentDetails!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+              if (matchedTopic != null && matchedTopic!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  "Best match: $matchedTopic",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xff9A3412),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (alignmentScore != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  "Score: ${alignmentScore!.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xff9A3412),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (successMessage != null && successMessage!.trim().isNotEmpty) {
+      widgets.add(
+        buildFeedbackCard(
+          bgColor: const Color(0xffECFDF3),
+          borderColor: const Color(0xffB7E4C7),
+          icon: Icons.check_circle_outline,
+          iconColor: const Color(0xff1E7A46),
+          title: "Update",
+          child: Text(
+            successMessage!,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (matchedQuestion != null) {
+      widgets.add(buildMatchedQuestionCard());
+    }
+
+    if (widgets.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        ...widgets.expand((widget) => [widget, const SizedBox(height: 14)]),
+      ],
     );
   }
 
@@ -702,6 +1155,7 @@ class _AddQuestionsState extends State<AddQuestions> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  buildTopFeedback(),
                   buildSectionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -835,10 +1289,12 @@ class _AddQuestionsState extends State<AddQuestions> {
                               controller: topicSearchController,
                               enabled: selectedSubjectId != null,
                               onChanged: filterTopicSuggestions,
+                              style: const TextStyle(color: Colors.black87),
                               decoration: InputDecoration(
                                 hintText: selectedSubjectId != null
                                     ? "Type to search topics"
                                     : "Select subject first",
+                                hintStyle: const TextStyle(color: Colors.grey),
                                 filled: true,
                                 fillColor: selectedSubjectId != null
                                     ? Colors.white
@@ -850,12 +1306,14 @@ class _AddQuestionsState extends State<AddQuestions> {
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
-                                      color: Color(0xffD9D9D9)),
+                                    color: Color(0xffD9D9D9),
+                                  ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(
-                                      color: Color(0xffD9D9D9)),
+                                    color: Color(0xffD9D9D9),
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -875,7 +1333,8 @@ class _AddQuestionsState extends State<AddQuestions> {
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                      color: const Color(0xffE0E0E0)),
+                                    color: const Color(0xffE0E0E0),
+                                  ),
                                 ),
                                 child: ListView.builder(
                                   shrinkWrap: true,
@@ -903,6 +1362,10 @@ class _AddQuestionsState extends State<AddQuestions> {
                                         removeTopic(topic["topic_id"]),
                                     deleteIcon:
                                         const Icon(Icons.close, size: 18),
+                                    backgroundColor: const Color(0xffEEF2FF),
+                                    side: const BorderSide(
+                                      color: Color(0xffC7D2FE),
+                                    ),
                                   );
                                 }).toList(),
                               ),
@@ -923,6 +1386,7 @@ class _AddQuestionsState extends State<AddQuestions> {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black87,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -947,7 +1411,10 @@ class _AddQuestionsState extends State<AddQuestions> {
                                         onChanged: (_) =>
                                             handleCorrectOption(index),
                                       ),
-                                      const Text("Correct"),
+                                      const Text(
+                                        "Correct",
+                                        style: TextStyle(color: Colors.black87),
+                                      ),
                                     ],
                                   ),
                                 ],

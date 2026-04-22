@@ -20,7 +20,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   String username = "User";
-  String userRole = "user";
+  String userRole = "student";
   int? userId;
   String accessToken = "";
 
@@ -69,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         "User";
 
     final storedRole =
-        prefs.getString("role") ?? prefs.getString("user_role") ?? "user";
+        prefs.getString("role") ?? prefs.getString("user_role") ?? "student";
 
     final storedToken = prefs.getString("access_token") ??
         prefs.getString("token") ??
@@ -113,7 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     setState(() {
       accessToken = "";
-      userRole = "user";
+      userRole = "student";
       userId = null;
       hasPendingContributorRequest = false;
 
@@ -160,7 +160,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
         final String freshName = (user["name"] ?? "User").toString();
         final String freshRole =
-            (user["role"] ?? "user").toString().toLowerCase().trim();
+            (user["role"] ?? "student").toString().toLowerCase().trim();
         final int freshUserId = user["id"] is int
             ? user["id"]
             : int.tryParse(user["id"].toString()) ?? 0;
@@ -382,7 +382,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (value == "contributor") return "contributor";
 
     // revoked, user, null, empty, or anything unknown -> user
-    return "user";
+    return "student";
   }
 
   void showSnackBar(String message) {
@@ -866,7 +866,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
             const SizedBox(height: 20),
-            if (userRole == "user" && !hasPendingContributorRequest)
+            if (userRole == "student" && !hasPendingContributorRequest)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: SizedBox(
@@ -901,7 +901,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
               ),
-            if (userRole == "user" && hasPendingContributorRequest)
+            if (userRole == "student" && hasPendingContributorRequest)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: SizedBox(
@@ -921,7 +921,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
               ),
-            if (userRole == "user") const SizedBox(height: 20),
+            if (userRole == "student") const SizedBox(height: 20),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: Align(

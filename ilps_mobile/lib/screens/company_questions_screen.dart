@@ -89,16 +89,6 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
     }
   }
 
-  int? get selectedQuestionTypeId {
-    if (questionType == null) return null;
-
-    final matches =
-        questionTypes.where((type) => type["name"] == questionType).toList();
-
-    if (matches.isEmpty) return null;
-    return matches.first["id"] as int;
-  }
-
   Future<void> fetchQuestionsByCompany() async {
     setState(() {
       isLoadingQuestions = true;
@@ -106,7 +96,9 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse("${AppConfig.baseUrl}/questions/getQuestions"),
+        Uri.parse(
+          "${AppConfig.baseUrl}/questions/getQuestionsByCompany/${widget.companyId}",
+        ),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -117,21 +109,60 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
 
         final List<Map<String, dynamic>> loadedQuestions =
             questionList.map<Map<String, dynamic>>((item) {
+          final latestOccurrence =
+              item["latest_occurrence"] is Map<String, dynamic>
+                  ? Map<String, dynamic>.from(item["latest_occurrence"])
+                  : <String, dynamic>{};
+
+          final companyIds = List<int>.from(item["company_ids"] ?? []);
+          final companyNames = List<String>.from(item["company_names"] ?? []);
+          final difficultyLevelsFromApi =
+              List<String>.from(item["difficulty_levels"] ?? []);
+          final years = List<String>.from(
+            (item["years"] ?? []).map((e) => e.toString()),
+          );
+          final languages = List<String>.from(item["languages"] ?? []);
+          final technologies = List<String>.from(item["technologies"] ?? []);
+
           return {
             "id": item["question_id"],
-            "question": item["question_string"],
-            "difficulty_level": item["difficulty_level"],
-            "type_name": item["type_name"],
-            "company_name": item["company_name"],
-            "company_id": item["company_id"],
-            "technology": item["technology"],
-            "language": item["language"],
-            "year": item["year"],
+            "question": item["question_string"] ?? "",
+            "type_name": item["type_name"] ?? "",
+            "topics": List<Map<String, dynamic>>.from(item["topics"] ?? []),
+            "appearance_count": item["appearance_count"] ?? 0,
+            "company_ids": companyIds,
+            "company_names": companyNames,
+            "difficulty_levels": difficultyLevelsFromApi,
+            "years": years,
+            "languages": languages,
+            "technologies": technologies,
+            "latest_occurrence": latestOccurrence,
+            "difficulty_level":
+                latestOccurrence["difficulty_level"] ??
+                (difficultyLevelsFromApi.isNotEmpty
+                    ? difficultyLevelsFromApi.first
+                    : ""),
+            "company_name":
+                latestOccurrence["company_name"] ??
+                (companyNames.isNotEmpty ? companyNames.join(", ") : ""),
+            "technology":
+                latestOccurrence["technology"] ??
+                (technologies.isNotEmpty ? technologies.join(", ") : ""),
+            "language":
+                latestOccurrence["language"] ??
+                (languages.isNotEmpty ? languages.join(", ") : ""),
+            "year":
+                latestOccurrence["year"]?.toString() ??
+                (years.isNotEmpty ? years.join(", ") : ""),
           };
         }).where((q) {
-          final matchesCompany = q["company_id"] == widget.companyId;
-          final matchesDifficulty =
-              difficulty == null || q["difficulty_level"] == difficulty;
+          final List<int> companyIds = List<int>.from(q["company_ids"] ?? []);
+          final matchesCompany = companyIds.contains(widget.companyId);
+
+          final matchesDifficulty = difficulty == null
+              ? true
+              : ((q["difficulty_levels"] as List?) ?? []).contains(difficulty);
+
           final matchesType =
               questionType == null || q["type_name"] == questionType;
 
@@ -187,12 +218,18 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
       final language = (question["language"] ?? "").toString().toLowerCase();
       final year = (question["year"] ?? "").toString().toLowerCase();
 
+      final List topics = question["topics"] ?? [];
+      final topicNames = topics
+          .map((t) => (t["topic_name"] ?? "").toString().toLowerCase())
+          .join(" ");
+
       return questionText.contains(search) ||
           typeName.contains(search) ||
           difficultyLevel.contains(search) ||
           technology.contains(search) ||
           language.contains(search) ||
-          year.contains(search);
+          year.contains(search) ||
+          topicNames.contains(search);
     }).toList();
 
     setState(() {
@@ -272,22 +309,49 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
     );
   }
 
-  Widget buildTag(String text) {
+  Widget buildTag(String text, {Color? bgColor, Color? textColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xffEEF2FF),
+        color: bgColor ?? const Color(0xffEEF2FF),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         text,
+        overflow: TextOverflow.ellipsis,
         style: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: const Color(0xff4F46E5),
+          color: textColor ?? const Color(0xff4F46E5),
         ),
       ),
     );
+  }
+
+  Color getDifficultyBg(String difficulty) {
+    switch (difficulty.toLowerCase()) {
+      case "easy":
+        return const Color(0xffE8F5E9);
+      case "medium":
+        return const Color(0xffFFF8E1);
+      case "hard":
+        return const Color(0xffFDECEA);
+      default:
+        return const Color(0xffEEF2FF);
+    }
+  }
+
+  Color getDifficultyText(String difficulty) {
+    switch (difficulty.toLowerCase()) {
+      case "easy":
+        return const Color(0xff2E7D32);
+      case "medium":
+        return const Color(0xffEF6C00);
+      case "hard":
+        return const Color(0xffC62828);
+      default:
+        return const Color(0xff4F46E5);
+    }
   }
 
   Widget buildQuestionCard(Map<String, dynamic> question, int index) {
@@ -363,6 +427,12 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                           formatDifficulty(
                             question["difficulty_level"].toString(),
                           ),
+                          bgColor: getDifficultyBg(
+                            question["difficulty_level"].toString(),
+                          ),
+                          textColor: getDifficultyText(
+                            question["difficulty_level"].toString(),
+                          ),
                         ),
                       if ((question["type_name"] ?? "").toString().isNotEmpty)
                         buildTag(question["type_name"].toString()),
@@ -372,6 +442,12 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                         buildTag(question["language"].toString()),
                       if ((question["year"] ?? "").toString().isNotEmpty)
                         buildTag(question["year"].toString()),
+                      if ((question["appearance_count"] ?? 0) > 0)
+                        buildTag(
+                          "${question["appearance_count"]} times",
+                          bgColor: const Color(0xffE0F2FE),
+                          textColor: const Color(0xff0369A1),
+                        ),
                     ],
                   ),
                 ],
@@ -501,7 +577,6 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                     children: [
                       buildSectionTitle("Filters"),
                       const SizedBox(height: 12),
-
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         child: Row(
@@ -509,6 +584,7 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                             Expanded(
                               child: DropdownButtonFormField<String?>(
                                 value: difficulty,
+                                isExpanded: true,
                                 iconSize: 21,
                                 borderRadius: BorderRadius.circular(12),
                                 style: GoogleFonts.inter(
@@ -523,6 +599,8 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                                     value: null,
                                     child: Text(
                                       "All",
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                       style: GoogleFonts.inter(fontSize: 14),
                                     ),
                                   ),
@@ -531,6 +609,8 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                                       value: level,
                                       child: Text(
                                         formatDifficulty(level),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
                                         style: GoogleFonts.inter(fontSize: 14),
                                       ),
                                     ),
@@ -544,10 +624,11 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                                 },
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: DropdownButtonFormField<String?>(
                                 value: questionType,
+                                isExpanded: true,
                                 iconSize: 21,
                                 borderRadius: BorderRadius.circular(12),
                                 style: GoogleFonts.inter(
@@ -555,13 +636,14 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xff1F2937),
                                 ),
-                                decoration:
-                                    buildDropdownDecoration("Question Type"),
+                                decoration: buildDropdownDecoration("Type"),
                                 items: [
                                   DropdownMenuItem<String?>(
                                     value: null,
                                     child: Text(
                                       "All",
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                       style: GoogleFonts.inter(fontSize: 14),
                                     ),
                                   ),
@@ -570,6 +652,8 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                                       value: type["name"] as String,
                                       child: Text(
                                         type["name"] as String,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
                                         style: GoogleFonts.inter(fontSize: 14),
                                       ),
                                     ),
@@ -586,12 +670,9 @@ class _CompanyQuestionsScreenState extends State<CompanyQuestionsScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 26),
-
                       buildSectionTitle("Questions"),
                       const SizedBox(height: 12),
-
                       if (filteredQuestions.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(

@@ -1,22 +1,32 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import { useState } from "react";
+
 import UserNavbar from "views/user/components/UserNavbar";
+import UserSidebar from "views/user/components/UserSidebar";
 import Footer from "views/user/components/Footer";
 
 export default function UserLayout() {
-  const userRole = localStorage.getItem("role"); // assuming you store role like "user" or "contributor"
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
-      
-      {/* Navbar */}
-      <UserNavbar />
+    <div className="flex h-screen bg-gradient-to-b from-[#e0f2fe] to-[#60a5fa] overflow-hidden">
 
-      {/* Main content */}
-      <main className="flex-1 p-8">
-        <Outlet />
-      </main>
+      {/* SIDEBAR */}
+      <UserSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <Footer />
+      {/* MAIN AREA */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+
+        {/* NAVBAR */}
+        <UserNavbar />
+
+        {/* PAGE CONTENT */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <Outlet context={{ collapsed, setCollapsed }} />
+        </main>
+
+        <Footer />
+      </div>
     </div>
   );
 }

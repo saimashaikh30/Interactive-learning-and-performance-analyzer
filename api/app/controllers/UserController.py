@@ -138,7 +138,7 @@ def register():
                 email=email,
                 password=None,
                 authprovider=AuthProviderEnum.google,
-                role=UserRoleEnum.user
+                role=UserRoleEnum.student
             )
             db.session.add(user)
             db.session.commit()
@@ -213,7 +213,7 @@ def login():
                 email=email,
                 password=None,
                 authprovider=AuthProviderEnum.google,
-                role=UserRoleEnum.user
+                role=UserRoleEnum.student
             )
             db.session.add(user)
             db.session.commit()

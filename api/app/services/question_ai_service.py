@@ -105,7 +105,11 @@ def is_obviously_valid_question(text: str) -> bool:
         r"define\s+.+",
         r"explain\s+.+",
         r"how\s+does\s+.+",
+        r"how\s+would\s+.+",
+        r"how\s+can\s+.+",
+        r"how\s+is\s+.+",
         r"why\s+does\s+.+",
+        r"why\s+is\s+.+",
         r"what\s+are\s+.+",
         r"which\s+.+",
         r"when\s+.+",
@@ -118,31 +122,26 @@ def is_obviously_valid_question(text: str) -> bool:
 def heuristic_question_rewrite(text: str):
     normalized = normalize_question_text(text)
 
-    # array is what -> What is an array?
     m = re.fullmatch(r"(.+?)\s+is\s+what", normalized)
     if m:
         subject = m.group(1).strip()
         return capitalize_first(f"What is {add_indefinite_article(subject)}?")
 
-    # linked list what -> What is a linked list?
     m = re.fullmatch(r"(.+?)\s+what", normalized)
     if m:
         subject = m.group(1).strip()
         return capitalize_first(f"What is {add_indefinite_article(subject)}?")
 
-    # stack define -> Define stack.
     m = re.fullmatch(r"(.+?)\s+define", normalized)
     if m:
         subject = m.group(1).strip()
         return capitalize_first(f"Define {subject}.")
 
-    # define stack -> Define stack.
     m = re.fullmatch(r"define\s+(.+)", normalized)
     if m:
         subject = m.group(1).strip()
         return capitalize_first(f"Define {subject}.")
 
-    # explain stack -> Explain stack.
     m = re.fullmatch(r"explain\s+(.+)", normalized)
     if m:
         subject = m.group(1).strip()
@@ -154,13 +153,11 @@ def heuristic_question_rewrite(text: str):
         if not subject.startswith(("is ", "are ", "was ", "were ")):
             return capitalize_first(f"What is {add_indefinite_article(subject)}?")
 
-    # queue what is -> What is a queue?
     m = re.fullmatch(r"(.+?)\s+what\s+is", normalized)
     if m:
         subject = m.group(1).strip()
         return capitalize_first(f"What is {add_indefinite_article(subject)}?")
 
-    # what is stack -> What is a stack?
     m = re.fullmatch(r"what\s+is\s+(.+)", normalized)
     if m:
         subject = m.group(1).strip()
@@ -168,7 +165,6 @@ def heuristic_question_rewrite(text: str):
             return capitalize_first(f"What is {subject}?")
         return capitalize_first(f"What is {add_indefinite_article(subject)}?")
 
-    # meaning of array -> What is the meaning of array?
     m = re.fullmatch(r"meaning\s+of\s+(.+)", normalized)
     if m:
         subject = m.group(1).strip()
@@ -195,7 +191,6 @@ def grammar_check_question(text: str):
             "suggested_text": text
         }
 
-    # 1. Catch clearly malformed questions first
     if looks_like_incomplete_or_invalid_question(text):
         heuristic_fix = heuristic_question_rewrite(text)
         return {
@@ -211,7 +206,6 @@ def grammar_check_question(text: str):
             "suggested_text": heuristic_fix if heuristic_fix else text
         }
 
-    # 2. If rewrite rule improves the sentence, force correction
     heuristic_fix = heuristic_question_rewrite(text)
     if heuristic_fix and normalize_question_text(heuristic_fix) != normalized:
         return {
@@ -227,7 +221,6 @@ def grammar_check_question(text: str):
             "suggested_text": heuristic_fix
         }
 
-    # 3. Clearly valid question forms can pass
     if is_obviously_valid_question(text):
         cleaned = capitalize_first(text)
         if any(cleaned.lower().startswith(prefix) for prefix in ["what ", "how ", "why ", "which ", "when ", "where "]):
@@ -238,7 +231,6 @@ def grammar_check_question(text: str):
             "suggested_text": cleaned
         }
 
-    # 4. Try LanguageTool for additional grammar support
     try:
         response = requests.post(
             LANGUAGETOOL_URL,
@@ -248,7 +240,6 @@ def grammar_check_question(text: str):
         response.raise_for_status()
         result = response.json()
     except Exception:
-        # IMPORTANT: do not auto-pass unknown malformed text
         return {
             "ok": False,
             "issues": [
@@ -291,6 +282,13 @@ def grammar_check_question(text: str):
     if any(corrected_text.lower().startswith(prefix) for prefix in ["what ", "how ", "why ", "which ", "when ", "where "]):
         corrected_text = ensure_question_mark(corrected_text)
 
+    if normalize_question_text(corrected_text) == normalize_question_text(text):
+        return {
+            "ok": True,
+            "issues": [],
+            "suggested_text": corrected_text
+        }
+
     serious_issue_count = sum(
         1 for issue in issues
         if issue["replacement"] is not None or "grammar" in (issue["message"] or "").lower()
@@ -303,7 +301,6 @@ def grammar_check_question(text: str):
             "suggested_text": corrected_text
         }
 
-    # 5. Final fallback: if still not obviously valid, reject
     if not is_obviously_valid_question(corrected_text):
         heuristic_fix = heuristic_question_rewrite(text)
         return {

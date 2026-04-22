@@ -43,7 +43,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
 
       if (response.statusCode == 200) {
         setState(() {
-          question = data["question"];
+          question = Map<String, dynamic>.from(data["question"]);
         });
       } else {
         showSnackBar(data["message"] ?? "Failed to load question details");
@@ -88,6 +88,73 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     } catch (_) {
       return isoDate;
     }
+  }
+
+  String joinStringList(dynamic value) {
+    if (value is List) {
+      final items = value
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (items.isEmpty) return "-";
+      return items.join(", ");
+    }
+
+    if (value == null) return "-";
+
+    final text = value.toString().trim();
+    return text.isEmpty ? "-" : text;
+  }
+
+  String getLatestOccurrenceValue(
+    Map<String, dynamic> q,
+    String fieldName,
+    String fallbackFieldName,
+  ) {
+    final latestOccurrence =
+        q["latest_occurrence"] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(q["latest_occurrence"])
+            : <String, dynamic>{};
+
+    final latestValue = latestOccurrence[fieldName];
+    if (latestValue != null && latestValue.toString().trim().isNotEmpty) {
+      return latestValue.toString().trim();
+    }
+
+    return joinStringList(q[fallbackFieldName]);
+  }
+
+  String getDifficultyValue(Map<String, dynamic> q) {
+    final latestOccurrence =
+        q["latest_occurrence"] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(q["latest_occurrence"])
+            : <String, dynamic>{};
+
+    final latestDifficulty = latestOccurrence["difficulty_level"]?.toString();
+    if (latestDifficulty != null && latestDifficulty.trim().isNotEmpty) {
+      return latestDifficulty.trim();
+    }
+
+    final levels = q["difficulty_levels"];
+    if (levels is List && levels.isNotEmpty) {
+      return levels.first.toString();
+    }
+
+    return "-";
+  }
+
+  String getCompanyValue(Map<String, dynamic> q) {
+    final latestOccurrence =
+        q["latest_occurrence"] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(q["latest_occurrence"])
+            : <String, dynamic>{};
+
+    final latestCompany = latestOccurrence["company_name"]?.toString();
+    if (latestCompany != null && latestCompany.trim().isNotEmpty) {
+      return latestCompany.trim();
+    }
+
+    return joinStringList(q["company_names"]);
   }
 
   Widget buildTag(String text, {Color? bgColor, Color? textColor}) {
@@ -202,7 +269,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             height: 30,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isCorrect ? const Color(0xff38A169) : const Color(0xffEEF2FF),
+              color: isCorrect
+                  ? const Color(0xff38A169)
+                  : const Color(0xffEEF2FF),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Text(
@@ -242,6 +311,18 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final q = question;
+
+    final difficultyValue =
+        q == null ? "-" : formatDifficulty(getDifficultyValue(q));
+    final companyValue = q == null ? "-" : getCompanyValue(q);
+    final technologyValue =
+        q == null ? "-" : getLatestOccurrenceValue(q, "technology", "technologies");
+    final languageValue =
+        q == null ? "-" : getLatestOccurrenceValue(q, "language", "languages");
+    final yearValue =
+        q == null ? "-" : getLatestOccurrenceValue(q, "year", "years");
+    final appearanceCount =
+        q == null ? 0 : (q["appearance_count"] ?? 0);
 
     return Scaffold(
       backgroundColor: const Color(0xffF6F8FC),
@@ -308,11 +389,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  if ((q["difficulty_level"] ?? "")
-                                      .toString()
-                                      .isNotEmpty)
+                                  if (difficultyValue != "-")
                                     buildTag(
-                                      formatDifficulty(q["difficulty_level"]),
+                                      difficultyValue,
                                       bgColor: Colors.white.withOpacity(0.20),
                                       textColor: Colors.white,
                                     ),
@@ -322,11 +401,15 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                       bgColor: Colors.white.withOpacity(0.20),
                                       textColor: Colors.white,
                                     ),
-                                  if ((q["company_name"] ?? "")
-                                      .toString()
-                                      .isNotEmpty)
+                                  if (companyValue != "-")
                                     buildTag(
-                                      q["company_name"].toString(),
+                                      companyValue,
+                                      bgColor: Colors.white.withOpacity(0.20),
+                                      textColor: Colors.white,
+                                    ),
+                                  if (appearanceCount > 0)
+                                    buildTag(
+                                      "$appearanceCount times",
                                       bgColor: Colors.white.withOpacity(0.20),
                                       textColor: Colors.white,
                                     ),
@@ -354,33 +437,43 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         buildInfoTile(
                           icon: Icons.code_rounded,
                           label: "Technology",
-                          value: q["technology"]?.toString() ?? "-",
+                          value: technologyValue,
                         ),
                         buildInfoTile(
                           icon: Icons.language_rounded,
                           label: "Language",
-                          value: q["language"]?.toString() ?? "-",
+                          value: languageValue,
                         ),
                         buildInfoTile(
                           icon: Icons.calendar_today_rounded,
                           label: "Year",
-                          value: q["year"]?.toString() ?? "-",
+                          value: yearValue,
+                        ),
+                        buildInfoTile(
+                          icon: Icons.business_rounded,
+                          label: "Companies",
+                          value: companyValue,
                         ),
                         buildInfoTile(
                           icon: Icons.person_rounded,
                           label: "Created By",
                           value: q["creator_name"]?.toString() ?? "-",
                         ),
-                        // buildInfoTile(
-                        //   icon: Icons.access_time_rounded,
-                        //   label: "Created At",
-                        //   value: formatDate(q["created_at"]?.toString()),
-                        // ),
-                        // buildInfoTile(
-                        //   icon: Icons.update_rounded,
-                        //   label: "Updated At",
-                        //   value: formatDate(q["updated_at"]?.toString()),
-                        // ),
+                        buildInfoTile(
+                          icon: Icons.repeat_rounded,
+                          label: "Appearance Count",
+                          value: appearanceCount.toString(),
+                        ),
+                        buildInfoTile(
+                          icon: Icons.access_time_rounded,
+                          label: "Created At",
+                          value: formatDate(q["created_at"]?.toString()),
+                        ),
+                        buildInfoTile(
+                          icon: Icons.update_rounded,
+                          label: "Updated At",
+                          value: formatDate(q["updated_at"]?.toString()),
+                        ),
 
                         const SizedBox(height: 22),
 
@@ -443,6 +536,104 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               ),
                             ),
                           ),
+
+                        if ((q["occurrences"] as List?) != null &&
+                            (q["occurrences"] as List).isNotEmpty) ...[
+                          const SizedBox(height: 22),
+                          buildSectionTitle("Occurrences"),
+                          const SizedBox(height: 12),
+                          Column(
+                            children: List.generate(
+                              (q["occurrences"] as List).length,
+                              (index) {
+                                final occurrence = (q["occurrences"] as List)[index]
+                                    as Map<String, dynamic>;
+
+                                final occCompany =
+                                    occurrence["company_name"]?.toString() ?? "-";
+                                final occDifficulty = formatDifficulty(
+                                  occurrence["difficulty_level"]?.toString(),
+                                );
+                                final occYear =
+                                    occurrence["year"]?.toString() ?? "-";
+                                final occLanguage =
+                                    occurrence["language"]?.toString() ?? "-";
+                                final occTechnology =
+                                    occurrence["technology"]?.toString() ?? "-";
+                                final occCreator =
+                                    occurrence["creator_name"]?.toString() ?? "-";
+                                final occCreatedAt = formatDate(
+                                  occurrence["created_at"]?.toString(),
+                                );
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: const Color(0xffECEFFC),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          if (occDifficulty != "-")
+                                            buildTag(occDifficulty),
+                                          if (occCompany != "-")
+                                            buildTag(occCompany),
+                                          if (occYear != "-")
+                                            buildTag(occYear),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        "Language: $occLanguage",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: const Color(0xff374151),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Technology: $occTechnology",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: const Color(0xff374151),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Created by: $occCreator",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: const Color(0xff374151),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Created at: $occCreatedAt",
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: const Color(0xff374151),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

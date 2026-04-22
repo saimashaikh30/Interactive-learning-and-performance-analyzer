@@ -1,56 +1,104 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import userRoutes from "routeUser";
-
-import logo from "assets/img/landing/ilps3small.png";
-import logoFull from "assets/img/landing/ilps3.png";
+import React, { useState } from "react";
+import { NavLink } from "react-router-dom";
+import {
+  MdMenu,
+  MdStar,
+  MdHome,
+  MdQuiz,
+  MdPeople,
+  MdSettings,
+  MdCode,
+  MdPerson,
+  MdLan,
+} from "react-icons/md";
 
 export default function UserSidebar() {
-  const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const menu = [
+    { name: "Home", path: "/user/dashboard", icon: MdHome },
+
+    { name: "Questions", path: "/user/userQuestions", icon: MdQuiz },
+    // { name: "Contribute", path: "/user/contribute", icon: MdPeople },
+    { name: "Profile", path: "/user/profile", icon: MdPerson },
+  ];
 
   return (
     <div
-      className={`${
-        open ? "w-48" : "w-20"
-      } bg-white min-h-screen shadow flex flex-col py-6 transition-all duration-300`}
+      style={{
+        backgroundColor: "white",
+        color: "#1e52c2", // slate-900
+        height: "100vh",
+        width: collapsed ? "80px" : "260px",
+        borderRight: "1px solid #e5e7eb",
+        transition: "0.3s",
+      }}
     >
-
-      {/* LOGO */}
+      {/* HEADER */}
       <div
-        className="flex items-center justify-center cursor-pointer mb-10"
-        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "12px",
+          borderBottom: "1px solid #e5e7eb",
+          alignItems: "center",
+        }}
       >
-        <img
-          src={open ? logoFull : logo}
-          alt="ILPS Logo"
-          className={`${open ? "h-14" : "h-10"} object-contain`}
-        />
+        {!collapsed && (
+          <span style={{ color: "#1e52c2", fontWeight: "bold" }}>
+            User Panel
+          </span>
+        )}
+
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            color: "#1e52c2",
+            fontSize: "20px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          ☰
+        </button>
       </div>
 
       {/* MENU */}
-      <div className="flex flex-col space-y-8 px-4">
+      <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
+        {menu.map((item) => {
+          const Icon = item.icon;
 
-        {userRoutes.map((route, index) => (
-          <Link
-            key={index}
-            to={`${route.layout}/${route.path}`}
-            className={`flex items-center ${
-              open ? "gap-4" : "justify-center"
-            } text-gray-500 hover:text-indigo-600 cursor-pointer`}
-            onClick={() => setOpen(true)}
-          >
-            {route.icon}
+          return (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              style={({ isActive }) => ({
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "10px",
+                borderRadius: "8px",
+                textDecoration: "none",
 
-            {open && (
-              <span className="text-sm font-medium">
-                {route.name}
-              </span>
-            )}
-          </Link>
-        ))}
+                // 🔥 FORCE COLORS (IMPORTANT)
+                backgroundColor: isActive ? "#2563eb" : "transparent",
+                color: isActive ? "white" : "#063079",
+              })}
+            >
+              {/* ICON */}
+              <Icon size={22} color="currentColor" />
 
+              {/* TEXT */}
+              {!collapsed && (
+                <span style={{ color: "inherit", fontWeight: 500 }}>
+                  {item.name}
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
       </div>
-
     </div>
   );
 }

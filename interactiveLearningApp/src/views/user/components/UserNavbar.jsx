@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { FaBell, FaSearch } from "react-icons/fa";
 import { MdPersonOutline } from "react-icons/md";
 import Dropdown from "components/dropdown";
@@ -5,17 +6,31 @@ import { NavLink } from "react-router-dom";
 import logo from "assets/img/landing/ilps3.png";
 
 export default function UserNavbar() {
-  const userRole = localStorage.getItem("role"); // "user" or "contributor"
+  const [userRole, setUserRole] = useState(localStorage.getItem("role"));
+
+  // 🔥 Sync role from localStorage (important)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setUserRole(localStorage.getItem("role"));
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // also run once in case role updated in same taba
+    handleStorageChange();
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
 
   return (
     <div className="flex items-center justify-between bg-white shadow-md px-6 py-1 sticky top-0 z-50">
       
       {/* Left: Logo + Search */}
       <div className="flex items-center gap-6">
-        {/* Logo */}
         <img src={logo} alt="ILPS" className="h-20 w-30 object-contain" />
 
-        {/* Search bar */}
         <div className="relative flex-1 max-w-xs">
           <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -26,13 +41,13 @@ export default function UserNavbar() {
         </div>
       </div>
 
-      {/* Right: Tabs + Notifications + Profile */}
+      {/* Right */}
       <div className="flex items-center gap-6">
         
         {/* Tabs */}
         <div className="flex gap-6">
           <NavLink
-            to="/user"
+            to="/user/dashboard"
             end
             className={({ isActive }) =>
               isActive
@@ -43,35 +58,25 @@ export default function UserNavbar() {
             Home
           </NavLink>
 
-          <NavLink
-            to="/user/contributor-requests"
-            className={({ isActive }) =>
-              isActive
-                ? "text-blue-600 border-b-2 border-blue-600 pb-1 font-semibold"
-                : "text-gray-700 hover:text-blue-500 pb-1 font-medium"
-            }
-          >
-            Contributor Requests
-          </NavLink>
-
+          {/* ✅ Conditional tab */}
           {userRole === "contributor" && (
             <NavLink
-              to="/user/questions"
+              to="/user/contribute"
               className={({ isActive }) =>
                 isActive
                   ? "text-blue-600 border-b-2 border-blue-600 pb-1 font-semibold"
                   : "text-gray-700 hover:text-blue-500 pb-1 font-medium"
               }
             >
-              Questions
+              Contribute
             </NavLink>
           )}
         </div>
 
-        {/* Notification icon */}
+        {/* Notification */}
         <FaBell className="text-gray-500 hover:text-blue-500 cursor-pointer transition" />
 
-        {/* Profile dropdown */}
+        {/* Profile */}
         <Dropdown
           button={
             <div className="flex items-center gap-2 cursor-pointer">
