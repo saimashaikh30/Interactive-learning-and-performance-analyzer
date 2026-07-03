@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 
@@ -8,6 +9,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS=False
 
     JWT_SECRET_KEY = "super-secret-key"  # ✅ this is required
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)
     SECRET_KEY = "another-secret-key" 
     MAIL_SERVER = "smtp.gmail.com"
     MAIL_PORT = 587

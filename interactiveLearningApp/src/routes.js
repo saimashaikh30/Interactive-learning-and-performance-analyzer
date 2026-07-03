@@ -10,6 +10,7 @@ import Questions from "views/admin/questions";
 import AdminManagement from "views/admin/adminManagement";
 import AddQuestion from "views/admin/questions/AddQuestion";
 import User from "views/admin/user";
+import Profile from "views/user/Profile";
 import ContributorRequests from "views/admin/contributorRequests";
 import RTLDefault from "views/rtl/default";
 
@@ -125,6 +126,14 @@ const routes = [
     roles: ["admin", "superadmin"],
   },
 
+{
+  name: "Profile",
+  layout: "/admin",
+  path: "profile",
+  component: <Profile />,
+  roles: ["admin", "superadmin"],
+  hidden: true,
+},
   {
     name: "Admin Management",
     layout: "/admin",

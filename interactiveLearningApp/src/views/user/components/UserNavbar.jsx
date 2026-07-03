@@ -7,22 +7,24 @@ import logo from "assets/img/landing/ilps3.png";
 
 export default function UserNavbar() {
   const [userRole, setUserRole] = useState(localStorage.getItem("role"));
-
+  const [displayName, setDisplayName] = useState(
+    localStorage.getItem("user_name") || "User"
+  );
   // 🔥 Sync role from localStorage (important)
   useEffect(() => {
-    const handleStorageChange = () => {
-      setUserRole(localStorage.getItem("role"));
-    };
+  const syncUser = () => {
+    setUserRole(localStorage.getItem("role"));
+    setDisplayName(localStorage.getItem("user_name") || "User");
+  };
 
-    window.addEventListener("storage", handleStorageChange);
+  syncUser();
 
-    // also run once in case role updated in same taba
-    handleStorageChange();
+  window.addEventListener("storage", syncUser);
 
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
+  return () => {
+    window.removeEventListener("storage", syncUser);
+  };
+}, []);
 
   return (
     <div className="flex items-center justify-between bg-white shadow-md px-6 py-1 sticky top-0 z-50">
@@ -89,12 +91,12 @@ export default function UserNavbar() {
           children={
             <div className="flex w-56 flex-col rounded-[20px] bg-white shadow-xl">
               <div className="p-4">
-                <p className="text-sm font-bold text-gray-700">👋 Hey</p>
+                <p className="text-sm font-bold text-gray-700">👋 Hey, {displayName}</p>
               </div>
               <div className="h-px w-full bg-gray-200" />
               <div className="flex flex-col p-4">
                 <a
-                  href="#"
+                  href="/user/profile"
                   className="text-sm text-gray-800 hover:text-blue-500"
                 >
                   Profile Settings

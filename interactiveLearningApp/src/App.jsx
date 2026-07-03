@@ -18,6 +18,7 @@ import ContributorRequest from "views/user/ContributorRequest";
 import ContributorQuestions from "views/user/Questions";
 import UserQuestions from "views/user/UserQuestions";
 import AddQuestion from "views/admin/questions/AddQuestion";
+import Profile from "views/user/Profile";
 
 import RequireAuth from "./middleware/RequireAuth";
 
@@ -53,6 +54,7 @@ const App = () => {
           <Route path="subjects" element={<UserSubjects />} />
           <Route path="topics" element={<UserTopics />} /> */}
 
+          <Route path="profile" element={<Profile />} />
           <Route path="contribute" element={<ContributorQuestions />} />
           <Route path="addQuestion" element={<AddQuestion />} />
           <Route path="userQuestions" element={<UserQuestions />} />
