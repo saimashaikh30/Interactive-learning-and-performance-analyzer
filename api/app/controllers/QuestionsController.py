@@ -13,12 +13,7 @@ from app.models import (
     Subject,
     QuestionOccurrence
 )
-from app.services.question_ai_service import (
-    grammar_check_question,
-    find_exact_duplicate,
-    find_semantic_duplicate,
-    validate_question_subject_topic_alignment
-)
+from app.services.question_ai_service import process_question
 
 from datetime import datetime
 
@@ -273,159 +268,124 @@ def addQuestion():
         if not company:
             return jsonify({"message": "Company not found"}), 404
 
-    topics = Topic.query.filter(Topic.topic_id.in_(topic_ids)).all()
+    topics = Topic.query.filter(
+        Topic.topic_id.in_(topic_ids)
+    ).all()
+
     if len(topics) != len(set(topic_ids)):
-        return jsonify({"message": "One or more topic IDs are invalid"}), 404
-
-    grammar_result = grammar_check_question(question_string)
-    if not grammar_result["ok"]:
         return jsonify({
-            "message": "Grammar issue detected. Question not added.",
-            "can_add": False,
-            "issues": grammar_result["issues"],
-            "suggested_question": grammar_result["suggested_text"]
-        }), 400
+            "message": "One or more topic IDs are invalid"
+        }), 404
 
-    subject_names = list({t.subject.subject_name for t in topics if t.subject})
-    topic_names = [t.topic_name for t in topics]
+    subject_names = list({
+        t.subject.subject_name
+        for t in topics
+        if t.subject
+    })
 
-    alignment_result = validate_question_subject_topic_alignment(
-        question_text=question_string,
-        subject_name=subject_names[0] if subject_names else "",
-        topic_names=topic_names
-    )
-
-    if not alignment_result["ok"]:
-        return jsonify({
-            "message": "Question does not match selected subject/topic.",
-            "can_add": False,
-            "alignment_issue": True,
-            "alignment_score": alignment_result["score"],
-            "matched_topic": alignment_result["matched_topic"],
-            "details": alignment_result["message"]
-        }), 400
+    topic_names = [
+        t.topic_name
+        for t in topics
+    ]
 
     existing_questions = Question.query.all()
 
-    exact_match = find_exact_duplicate(question_string, existing_questions)
-    if exact_match:
-        try:
-            existing_topic_ids = {
-                row.topic_id for row in Topic_Questions.query.filter_by(
-                    question_id=exact_match.question_id
-                ).all()
-            }
-
-            for topic_id in set(topic_ids):
-                if topic_id not in existing_topic_ids:
-                    db.session.add(Topic_Questions(
-                        topic_id=topic_id,
-                        question_id=exact_match.question_id
-                    ))
-
-            existing_occurrence = get_existing_occurrence(
-                exact_match.question_id,
-                company_id,
-                year,
-                language,
-                technology,
-                difficulty_enum
-            )
-
-            if not existing_occurrence:
-                db.session.add(QuestionOccurrence(
-                    question_id=exact_match.question_id,
-                    company_id=company_id,
-                    year=year,
-                    language=language,
-                    technology=technology,
-                    difficulty_level=difficulty_enum,
-                    created_by=created_by
-                ))
-
-            db.session.commit()
-
-            updated_question = Question.query.filter_by(
-                question_id=exact_match.question_id
-            ).first()
-
-            return jsonify({
-                "message": "Exact duplicate found. Existing question reused and occurrence recorded.",
-                "action": "duplicate_merged",
-                "matched_question": serialize_question(updated_question)
-            }), 200
-
-        except Exception as e:
-            db.session.rollback()
-            print("Duplicate merge error:", str(e))
-            return jsonify({
-                "message": "Failed to merge duplicate question",
-                "error": str(e)
-            }), 500
-
-    semantic_match, similarity_score = find_semantic_duplicate(
-        question_string,
-        existing_questions,
-        threshold=0.85
+    result = process_question(
+        question=question_string,
+        subject_name=subject_names[0] if subject_names else "",
+        topic_names=topic_names,
+        existing_questions=existing_questions
     )
 
-    if semantic_match:
-        try:
-            existing_topic_ids = {
-                row.topic_id for row in Topic_Questions.query.filter_by(
-                    question_id=semantic_match.question_id
-                ).all()
-            }
+    if not result["success"]:
 
-            for topic_id in set(topic_ids):
-                if topic_id not in existing_topic_ids:
-                    db.session.add(Topic_Questions(
-                        topic_id=topic_id,
-                        question_id=semantic_match.question_id
-                    ))
-
-            existing_occurrence = get_existing_occurrence(
-                semantic_match.question_id,
-                company_id,
-                year,
-                language,
-                technology,
-                difficulty_enum
-            )
-
-            if not existing_occurrence:
-                db.session.add(QuestionOccurrence(
-                    question_id=semantic_match.question_id,
-                    company_id=company_id,
-                    year=year,
-                    language=language,
-                    technology=technology,
-                    difficulty_level=difficulty_enum,
-                    created_by=created_by
-                ))
-
-            db.session.commit()
-
-            updated_question = Question.query.filter_by(
-                question_id=semantic_match.question_id
-            ).first()
-
+        if result["stage"] == "grammar":
             return jsonify({
-                "message": "Similar question already exists. Existing question reused and occurrence recorded.",
-                "action": "semantic_duplicate_merged",
-                "similarity_score": round(similarity_score, 4),
-                "matched_question": serialize_question(updated_question)
-            }), 200
+                "message": result["message"],
+                "errors": result["data"]["errors"],
+                "suggested_question": result["data"]["corrected_text"]
+            }), 400
 
-        except Exception as e:
-            db.session.rollback()
-            print("Semantic duplicate merge error:", str(e))
+        if result["stage"] == "alignment":
             return jsonify({
-                "message": "Failed to merge similar question",
-                "error": str(e)
-            }), 500
+                "message": result["message"],
+                "alignment_score": result["data"]["score"],
+                "matched_topic": result["data"]["matched_topic"]
+            }), 400
+
+        if result["stage"] == "duplicate":
+
+            duplicate = result["duplicate"]
+
+            try:
+
+                existing_topic_ids = {
+                    row.topic_id
+                    for row in Topic_Questions.query.filter_by(
+                        question_id=duplicate.question_id
+                    ).all()
+                }
+
+                for topic_id in set(topic_ids):
+                    if topic_id not in existing_topic_ids:
+                        db.session.add(
+                            Topic_Questions(
+                                topic_id=topic_id,
+                                question_id=duplicate.question_id
+                            )
+                        )
+
+                existing_occurrence = get_existing_occurrence(
+                    duplicate.question_id,
+                    company_id,
+                    year,
+                    language,
+                    technology,
+                    difficulty_enum
+                )
+
+                if not existing_occurrence:
+                    db.session.add(
+                        QuestionOccurrence(
+                            question_id=duplicate.question_id,
+                            company_id=company_id,
+                            year=year,
+                            language=language,
+                            technology=technology,
+                            difficulty_level=difficulty_enum,
+                            created_by=created_by
+                        )
+                    )
+
+                db.session.commit()
+
+                updated_question = Question.query.filter_by(
+                    question_id=duplicate.question_id
+                ).first()
+
+                response = {
+                    "action": "duplicate_merged",
+                    "message": result["message"],
+                    "matched_question": serialize_question(updated_question),
+                    "similarity_score": result.get("similarity")
+                }
+
+                if "similarity" in result:
+                    response["similarity_score"] = result["similarity"]
+
+                return jsonify(response), 200
+
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({
+                    "message": "Failed to merge duplicate question",
+                    "error": str(e)
+                }), 500
+
+    question_string = result["question"]
 
     try:
+
         question = Question(
             question_string=question_string,
             type_id=type_id,
@@ -436,41 +396,48 @@ def addQuestion():
         db.session.flush()
 
         for topic in topics:
-            db.session.add(Topic_Questions(
-                topic_id=topic.topic_id,
-                question_id=question.question_id
-            ))
+            db.session.add(
+                Topic_Questions(
+                    topic_id=topic.topic_id,
+                    question_id=question.question_id
+                )
+            )
 
         for opt in cleaned_options:
-            db.session.add(Option(
-                question_id=question.question_id,
-                option_text=opt["option_text"],
-                is_correct=opt["is_correct"]
-            ))
+            db.session.add(
+                Option(
+                    question_id=question.question_id,
+                    option_text=opt["option_text"],
+                    is_correct=opt["is_correct"]
+                )
+            )
 
-        db.session.add(QuestionOccurrence(
-            question_id=question.question_id,
-            company_id=company_id,
-            year=year,
-            language=language,
-            technology=technology,
-            difficulty_level=difficulty_enum,
-            created_by=created_by
-        ))
+        db.session.add(
+            QuestionOccurrence(
+                question_id=question.question_id,
+                company_id=company_id,
+                year=year,
+                language=language,
+                technology=technology,
+                difficulty_level=difficulty_enum,
+                created_by=created_by
+            )
+        )
 
         db.session.commit()
 
-        question = Question.query.filter_by(question_id=question.question_id).first()
+        question = Question.query.filter_by(
+            question_id=question.question_id
+        ).first()
 
         return jsonify({
-            "message": "Question added successfully",
             "action": "new_question_added",
+            "message": "Question added successfully",
             "question": serialize_question(question)
         }), 201
 
     except IntegrityError as e:
         db.session.rollback()
-        print("IntegrityError in addQuestion:", str(e))
         return jsonify({
             "message": "Failed to add question",
             "error": str(e.orig)
@@ -478,12 +445,11 @@ def addQuestion():
 
     except Exception as e:
         db.session.rollback()
-        print("Error in addQuestion:", str(e))
         return jsonify({
             "message": "Failed to add question",
             "error": str(e)
         }), 500
-
+  
 
 @questions_bp.route("/editQuestion", methods=["PUT"])
 def editQuestion():

@@ -32,6 +32,8 @@ const Questions = () => {
       setMessage(null);
 
       const res = await axios.get(`${BASE_URL}/questions/getQuestions`);
+      console.table(res.data.questions);
+     
       setQuestions(res.data.questions || []);
     } catch (err) {
       setMessage({
@@ -80,10 +82,20 @@ const Questions = () => {
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
+       alert(
+  `Question: ${q.question_string}
+Difficulty: ${q.difficulty_level}
+Selected: ${selectedLevel}`
+);
       const matchesType = !selectedType || q.type_name === selectedType;
-      const matchesDifficulty =
-        !selectedLevel || q.difficulty_level === selectedLevel;
-
+     const matchesDifficulty =
+  !selectedLevel ||
+  (q.occurrences || []).some(
+    occ =>
+      occ.difficulty_level &&
+      occ.difficulty_level.toLowerCase() ===
+      selectedLevel.toLowerCase()
+  );
       const matchesSearch =
         !searchText ||
         q.question_string?.toLowerCase().includes(searchText) ||
